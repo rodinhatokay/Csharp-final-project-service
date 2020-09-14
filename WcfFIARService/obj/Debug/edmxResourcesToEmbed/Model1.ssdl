@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Schema Namespace="fourinrowDB_rodinhatokay_alinapsoModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+  <EntityType Name="Games">
+    <Key>
+      <PropertyRef Name="GameId" />
+    </Key>
+    <Property Name="GameId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="GameOver" Type="bit" Nullable="false" />
+    <Property Name="GameStart" Type="datetime" Nullable="false" />
+    <Property Name="Player1Points" Type="int" Nullable="false" />
+    <Property Name="Player2Points" Type="int" Nullable="false" />
+    <Property Name="Player_PlayerId" Type="int" />
+    <Property Name="PlayedAgainst_PlayerId" Type="int" />
+    <Property Name="Winner_PlayerId" Type="int" />
+  </EntityType>
+  <EntityType Name="Players">
+    <Key>
+      <PropertyRef Name="PlayerId" />
+    </Key>
+    <Property Name="PlayerId" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+    <Property Name="UserName" Type="nvarchar(max)" />
+    <Property Name="Pass" Type="nvarchar(max)" />
+    <Property Name="Status" Type="int" Nullable="false" />
+  </EntityType>
+  <Association Name="FK_dbo_Games_dbo_Players_PlayedAgainst_PlayerId">
+    <End Role="Players" Type="Self.Players" Multiplicity="0..1" />
+    <End Role="Games" Type="Self.Games" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="Players">
+        <PropertyRef Name="PlayerId" />
+      </Principal>
+      <Dependent Role="Games">
+        <PropertyRef Name="PlayedAgainst_PlayerId" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_dbo_Games_dbo_Players_Player_PlayerId">
+    <End Role="Players" Type="Self.Players" Multiplicity="0..1" />
+    <End Role="Games" Type="Self.Games" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="Players">
+        <PropertyRef Name="PlayerId" />
+      </Principal>
+      <Dependent Role="Games">
+        <PropertyRef Name="Player_PlayerId" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <Association Name="FK_dbo_Games_dbo_Players_Winner_PlayerId">
+    <End Role="Players" Type="Self.Players" Multiplicity="0..1" />
+    <End Role="Games" Type="Self.Games" Multiplicity="*" />
+    <ReferentialConstraint>
+      <Principal Role="Players">
+        <PropertyRef Name="PlayerId" />
+      </Principal>
+      <Dependent Role="Games">
+        <PropertyRef Name="Winner_PlayerId" />
+      </Dependent>
+    </ReferentialConstraint>
+  </Association>
+  <EntityContainer Name="fourinrowDB_rodinhatokay_alinapsoModelStoreContainer">
+    <EntitySet Name="Games" EntityType="Self.Games" Schema="dbo" store:Type="Tables" />
+    <EntitySet Name="Players" EntityType="Self.Players" Schema="dbo" store:Type="Tables" />
+    <AssociationSet Name="FK_dbo_Games_dbo_Players_PlayedAgainst_PlayerId" Association="Self.FK_dbo_Games_dbo_Players_PlayedAgainst_PlayerId">
+      <End Role="Players" EntitySet="Players" />
+      <End Role="Games" EntitySet="Games" />
+    </AssociationSet>
+    <AssociationSet Name="FK_dbo_Games_dbo_Players_Player_PlayerId" Association="Self.FK_dbo_Games_dbo_Players_Player_PlayerId">
+      <End Role="Players" EntitySet="Players" />
+      <End Role="Games" EntitySet="Games" />
+    </AssociationSet>
+    <AssociationSet Name="FK_dbo_Games_dbo_Players_Winner_PlayerId" Association="Self.FK_dbo_Games_dbo_Players_Winner_PlayerId">
+      <End Role="Players" EntitySet="Players" />
+      <End Role="Games" EntitySet="Games" />
+    </AssociationSet>
+  </EntityContainer>
+</Schema>

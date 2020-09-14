@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+  <EntityContainerMapping StorageEntityContainer="fourinrowDB_rodinhatokay_alinapsoModelStoreContainer" CdmEntityContainer="fourinrowDB_rodinhatokay_alinapsoEntities2">
+    <EntitySetMapping Name="Games">
+      <EntityTypeMapping TypeName="fourinrowDB_rodinhatokay_alinapsoModel.Game">
+        <MappingFragment StoreEntitySet="Games">
+          <ScalarProperty Name="GameId" ColumnName="GameId" />
+          <ScalarProperty Name="GameOver" ColumnName="GameOver" />
+          <ScalarProperty Name="GameStart" ColumnName="GameStart" />
+          <ScalarProperty Name="Player1Points" ColumnName="Player1Points" />
+          <ScalarProperty Name="Player2Points" ColumnName="Player2Points" />
+          <ScalarProperty Name="Player_PlayerId" ColumnName="Player_PlayerId" />
+          <ScalarProperty Name="PlayedAgainst_PlayerId" ColumnName="PlayedAgainst_PlayerId" />
+          <ScalarProperty Name="Winner_PlayerId" ColumnName="Winner_PlayerId" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+    <EntitySetMapping Name="Players">
+      <EntityTypeMapping TypeName="fourinrowDB_rodinhatokay_alinapsoModel.Player">
+        <MappingFragment StoreEntitySet="Players">
+          <ScalarProperty Name="PlayerId" ColumnName="PlayerId" />
+          <ScalarProperty Name="UserName" ColumnName="UserName" />
+          <ScalarProperty Name="Pass" ColumnName="Pass" />
+          <ScalarProperty Name="Status" ColumnName="Status" />
+        </MappingFragment>
+      </EntityTypeMapping>
+    </EntitySetMapping>
+  </EntityContainerMapping>
+</Mapping>
