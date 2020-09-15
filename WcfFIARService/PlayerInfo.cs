@@ -61,6 +61,10 @@ namespace WcfFIARService
         [DataMember]
         public List<string> PlayedAgainst { get; set; }
 
-
+        
+        public override string ToString()
+        {
+            return username;
+        }
     }
 }

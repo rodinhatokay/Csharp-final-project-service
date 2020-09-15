@@ -19,7 +19,7 @@ namespace WcfFIARService
 
         [OperationContract]
         [FaultContract(typeof(OpponentDisconnectedFault))]
-        bool InvatationSend(string from, string to);
+        bool InvatationSend(string from, string to); //receive invite from client to send to client
 
 
 
@@ -51,10 +51,13 @@ namespace WcfFIARService
     public interface IFIARSCallback
     {
         [OperationContract(IsOneWay = false)]
-        bool SendInvite(string username);
+        bool SendInvite(string username); // send invite to client
 
         [OperationContract(IsOneWay = true)]
         void OtherPlayerMoved(MoveResult result, int col);
+
+        [OperationContract(IsOneWay = true)]
+        void UpdateClients(List<PlayerInfo> players); // update clients list that are not playing
 
 
         [OperationContract(IsOneWay = true)]

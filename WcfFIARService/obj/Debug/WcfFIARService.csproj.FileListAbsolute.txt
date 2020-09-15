@@ -10,3 +10,15 @@ C:\Users\Rodin\Desktop\Csharp FinalProject\WcfFIARService\WcfFIARService\bin\Deb
 C:\Users\Rodin\Desktop\Csharp FinalProject\WcfFIARService\WcfFIARService\bin\Debug\EntityFramework.xml
 C:\Users\Rodin\Desktop\Csharp FinalProject\WcfFIARService\WcfFIARService\bin\Debug\EntityFramework.SqlServer.xml
 C:\Users\Rodin\Desktop\Csharp FinalProject\WcfFIARService\WcfFIARService\obj\Debug\WcfFIARService.csproj.CopyComplete
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\WcfFIARService.dll.config
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\WcfFIARService.dll
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\WcfFIARService.pdb
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.dll
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.SqlServer.dll
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.xml
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.SqlServer.xml
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csprojAssemblyReference.cache
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csproj.CoreCompileInputs.cache
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csproj.CopyComplete
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.dll
+D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.pdb

@@ -69,9 +69,13 @@ namespace WcfFIARService
                 player.Status = 1;
                 ctx.SaveChanges();
                 IFIARSCallback callback = OperationContext.Current.GetCallbackChannel<IFIARSCallback>();
+                var connectedClients = GetAvalibalePlayers();
+                foreach (var cli in clients.Values)// send to all others to update thier list
+                {
+                    cli.UpdateClients(connectedClients);
+                }
                 clients.Add(username, callback);
                 clientIngame.Add(username, false);
-
             }
         }
 
@@ -86,6 +90,17 @@ namespace WcfFIARService
                               select p).FirstOrDefault();
                 player.Status = 0;
                 ctx.SaveChanges();
+            }
+            var connectedClients = GetAvalibalePlayers();
+            foreach (var client in clients)
+            {
+                try { 
+                client.Value.UpdateClients(connectedClients); // need to surrond with try and catch i think to 
+                }
+                catch(Exception ex)
+                {
+
+                }
             }
         }
 
@@ -174,7 +189,7 @@ namespace WcfFIARService
                 fault.Detail = "The Player is offline";
                 throw new FaultException<OpponentDisconnectedFault>(fault);
             }
-            
+
             var result = clients[to].SendInvite(from);
             if (result == true)
             {
