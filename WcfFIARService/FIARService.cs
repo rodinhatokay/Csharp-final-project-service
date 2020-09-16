@@ -136,6 +136,7 @@ namespace WcfFIARService
         }
         public MoveResult ReportMove(string username, int col)
         {
+            GameBoard gb = findGame(username);
             MoveResult result = findGame(username).VerifyMove(username, col);
             if (result == MoveResult.Draw)
             {
@@ -148,7 +149,7 @@ namespace WcfFIARService
                 //remove game from games 
                 //update database accordingly
             }
-            string other_player = ""; // need to get this from the game
+            string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username; // need to get this from the game
             if (result == MoveResult.PlayerLeft)
             {
                 OpponentDisconnectedFault fault = new OpponentDisconnectedFault();

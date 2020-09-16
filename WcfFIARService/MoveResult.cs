@@ -19,6 +19,8 @@ namespace WcfFIARService
         [EnumMember]
         GameOn,
         [EnumMember]
-        PlayerLeft
+        PlayerLeft,
+        [EnumMember]
+        IlligelMove
     }
 }

@@ -15,8 +15,8 @@ namespace WcfFIARService
     class GameBoard
     {
         private PlayerColor[,] board;
-        private PlayerInfo player1;
-        private PlayerInfo player2;
+        public PlayerInfo player1 { get; }
+        public PlayerInfo player2 { get; }
         private bool p1Connected;
         public bool p2Connected;
         private bool turnPlayer1; //TODO: MAYBE MAKE ENUM
@@ -40,33 +40,30 @@ namespace WcfFIARService
                 ctx.Games.Add(g);
                 ctx.SaveChanges();
                 Game g2 = g;
+
             }
         }
 
         public MoveResult VerifyMove(string player, int col)
         {
-            return MoveResult.GameOn;
-        }
 
-
-        // will throw 
-        public bool insertDisk(int col, PlayerColor pc)
-        {
+            if (p1Connected == false || p1Connected == false)
+                return MoveResult.PlayerLeft;
+            if (turnPlayer1 && player1.username != player || !turnPlayer1 && player2.username != player)
+                return MoveResult.NotYourTurn;
             int row = getEmptyInCol(col);
-            if (row == -1) //  ??
+            if (row != -1)
             {
-                IlligaleMove illigalMove = new IlligaleMove
-                {
-                    Details = "Illigal Move"
-                };
-                throw new FaultException<IlligaleMove>(illigalMove, new FaultReason("Player made Incorrect move"));
-                //need to put on top of the function as [FaultContract(typeof(PlayerAlreadyConnectedFault))] in interface
+                board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Blue;
+                if (checkIfGameOver(col, row))
+                    return MoveResult.YouWon;
+                turnPlayer1 = !turnPlayer1;
+                return MoveResult.GameOn;
             }
 
-            board[col, row] = pc;
-            return checkIfGameOver(col, row);
-
+            return MoveResult.IlligelMove;
         }
+
 
         private int getEmptyInCol(int col)
         {
