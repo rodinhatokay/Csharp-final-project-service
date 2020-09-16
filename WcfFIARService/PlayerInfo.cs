@@ -1,18 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.Serialization;
+using System.ServiceModel;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
     [DataContract]
-    public class PlayerInfo 
+    public class PlayerInfo
     {
 
         public PlayerInfo(Player player)
         {
+
+            init(player);
+
+        }
+        public PlayerInfo(string UserName)
+        {
+            username = UserName;
+
+            using (var ctx = new FIARDBContext())
+            {
+                var player = (from pl in ctx.Players
+                              where pl.UserName == UserName
+                              select pl).ToList();
+                if (player.Count > 0)
+                {
+                    init(player[0]);
+                }
+
+
+
+
+            }
+
+        }
+        private void init(Player player)
+        {
+            id = player.PlayerId;
             username = player.UserName;
             Wins = 0;
             Loses = 0;
@@ -45,11 +74,12 @@ namespace WcfFIARService
                     }
                 }
             }
-
         }
 
         [DataMember]
-        public string username{ get; set; }
+        public int id { get; set; }
+        [DataMember]
+        public string username { get; set; }
         [DataMember]
         public int Wins { get; set; }
 
@@ -61,10 +91,6 @@ namespace WcfFIARService
         [DataMember]
         public List<string> PlayedAgainst { get; set; }
 
-        
-        public override string ToString()
-        {
-            return username;
-        }
+
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.ServiceModel;
@@ -10,24 +11,41 @@ namespace WcfFIARService
 {
     enum PlayerColor { Empty, Blue, Red };
 
-    
+
     class GameBoard
     {
         private PlayerColor[,] board;
-        private int player1;
-        private int player2;
+        private PlayerInfo player1;
+        private PlayerInfo player2;
+        private bool p1Connected;
+        public bool p2Connected;
+        private bool turnPlayer1; //TODO: MAYBE MAKE ENUM
 
-        public GameBoard(int player1, int player2)
+        public GameBoard(string p1, string p2)
         {
-            this.player1 = player1;
-            this.player2 = player2;
 
+            this.player1 = new PlayerInfo(p1);
+            this.player2 = new PlayerInfo(p2);
+            p1Connected = true;
+            p2Connected = true;
             board = new PlayerColor[7, 6];
+            turnPlayer1 = true;
+            using (var ctx = new FIARDBContext())
+            {
+                var g = new Game();
+                g.Player_PlayerId = player1.id;
+                g.PlayedAgainst_PlayerId = player2.id;
+                g.GameStart = DateTime.Now;
+
+                ctx.Games.Add(g);
+                ctx.SaveChanges();
+                Game g2 = g;
+            }
         }
 
         public MoveResult VerifyMove(string player, int col)
         {
-            return MoveResult.Draw;
+            return MoveResult.GameOn;
         }
 
 
@@ -65,7 +83,7 @@ namespace WcfFIARService
             var rightDig = advInDirection(board[col, row], col, row, 4, 1, -1);
             var rightDownDig = advInDirection(board[col, row], col, row, 4, 1, 1);// added
             var down = advInDirection(board[col, row], col, row, 4, 0, -1);
-            
+
             return leftDig || rightDig || down || leftDownDig || rightDownDig;
         }
 
@@ -79,5 +97,19 @@ namespace WcfFIARService
                 return true;
             return advInDirection(pc, col + directionX, row + directionY, count - 1, directionX, directionY);
         }
+
+        public bool CheckIfPlayerInGame(string username)
+        {
+            return player1.username == username || player2.username == username;
+        }
+
+        public void playerDiscounnected(string username)
+        {
+            if (username == player1.username)
+                p1Connected = false;
+            if (username == player2.username)
+                p2Connected = false;
+        }
+
     }
 }

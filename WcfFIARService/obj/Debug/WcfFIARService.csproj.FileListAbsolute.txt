@@ -22,3 +22,15 @@ D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\Wc
 D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csproj.CopyComplete
 D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.dll
 D:\Csharp final project\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.pdb
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\WcfFIARService.dll.config
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\WcfFIARService.dll
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\WcfFIARService.pdb
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.dll
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.SqlServer.dll
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.xml
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\bin\Debug\EntityFramework.SqlServer.xml
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csprojAssemblyReference.cache
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csproj.CoreCompileInputs.cache
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.csproj.CopyComplete
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.dll
+C:\Users\napso\Desktop\projects\Csharp-final-project-service\WcfFIARService\obj\Debug\WcfFIARService.pdb

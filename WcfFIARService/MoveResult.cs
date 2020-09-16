@@ -17,6 +17,8 @@ namespace WcfFIARService
         [EnumMember]
         NotYourTurn,
         [EnumMember]
-        GameOn
+        GameOn,
+        [EnumMember]
+        PlayerLeft
     }
 }

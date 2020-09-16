@@ -18,9 +18,14 @@ namespace WcfFIARService
     {
 
         Dictionary<string, IFIARSCallback> clients = new Dictionary<string, IFIARSCallback>();
-        Dictionary<string, bool> clientIngame = new Dictionary<string, bool>();
-        Dictionary<string, GameBoard> games = new Dictionary<string, GameBoard>();
+        //Dictionary<string, bool> clientIngame = new Dictionary<string, bool>();
+        List<GameBoard> games = new List<GameBoard>();
 
+        public FIARService()
+        {
+            Init();
+
+        }
 
         public List<PlayerInfo> GetAvalibalePlayers()
         {
@@ -34,13 +39,25 @@ namespace WcfFIARService
                 {
                     pi.Add(new PlayerInfo(player));
                 }
-
-                if (pi == null) return new List<PlayerInfo>();
                 return pi;
             }
 
         }
 
+        public void Init()
+        {
+            using (var ctx = new FIARDBContext())
+            {
+                var players = (from p in ctx.Players
+                               where p.Status == 1
+                               select p).ToList();
+                foreach (var player in players)
+                {
+                    player.Status = 0;
+                }
+                ctx.SaveChanges();
+            }
+        }
 
         public void PlayerLogin(string username, string password)
         {
@@ -75,14 +92,14 @@ namespace WcfFIARService
                     cli.UpdateClients(connectedClients);
                 }
                 clients.Add(username, callback);
-                clientIngame.Add(username, false);
+                //clientIngame.Add(username, false);
             }
         }
 
         public void PlayerLogout(string username)
         {
             clients.Remove(username);
-            clientIngame.Remove(username);
+            //clientIngame.Remove(username);
             using (var ctx = new FIARDBContext())
             {
                 var player = (from p in ctx.Players
@@ -91,22 +108,35 @@ namespace WcfFIARService
                 player.Status = 0;
                 ctx.SaveChanges();
             }
+            games.ForEach(g => g.playerDiscounnected(username));
             var connectedClients = GetAvalibalePlayers();
             foreach (var client in clients)
             {
-                try { 
-                client.Value.UpdateClients(connectedClients); // need to surrond with try and catch i think to 
+                try
+                {
+                    client.Value.UpdateClients(connectedClients); // need to surrond with try and catch i think to 
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
 
                 }
             }
         }
 
+        private GameBoard findGame(string username)
+        {
+            foreach (var g in games)
+            {
+                if (g.CheckIfPlayerInGame(username))
+                    return g;
+            }
+
+            return null;
+
+        }
         public MoveResult ReportMove(string username, int col)
         {
-            MoveResult result = games[username].VerifyMove(username, col);
+            MoveResult result = findGame(username).VerifyMove(username, col);
             if (result == MoveResult.Draw)
             {
                 //remove game from games 
@@ -119,7 +149,7 @@ namespace WcfFIARService
                 //update database accordingly
             }
             string other_player = ""; // need to get this from the game
-            if (!clientIngame.ContainsKey(other_player))
+            if (result == MoveResult.PlayerLeft)
             {
                 OpponentDisconnectedFault fault = new OpponentDisconnectedFault();
                 fault.Detail = "The other Player quit";
@@ -193,8 +223,8 @@ namespace WcfFIARService
             var result = clients[to].SendInvite(from);
             if (result == true)
             {
-                //clients.Add(from,)
-                //need to add to game
+                GameBoard g = new GameBoard(from, to);
+                games.Add(g);
                 return true;
             }
             else

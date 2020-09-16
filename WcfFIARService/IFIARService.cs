@@ -8,7 +8,7 @@ using System.Text;
 namespace WcfFIARService
 {
     //(CallbackContract = typeof(IFIARSCallback))
-    
+
     [ServiceContract(CallbackContract = typeof(IFIARSCallback))]
     public interface IFIARService
     {
@@ -31,7 +31,8 @@ namespace WcfFIARService
         [OperationContract]
         void PlayerLogout(string username);
 
-
+        [OperationContract]
+        void Init();
 
         [OperationContract]
         void Disconnected(string username);//middle game or something
