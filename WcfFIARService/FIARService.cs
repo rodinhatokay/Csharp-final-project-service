@@ -138,32 +138,48 @@ namespace WcfFIARService
         {
             GameBoard gb = findGame(username);
             MoveResult result = findGame(username).VerifyMove(username, col);
-            if (result == MoveResult.Draw)
-            {
-                //remove game from games 
-                //update database accordingly
-
-            }
-            else if (result == MoveResult.YouWon)
-            {
-                //remove game from games 
-                //update database accordingly
-            }
-            string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username; // need to get this from the game
+            string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username;
             if (result == MoveResult.PlayerLeft)
             {
+                //TODO :update game ended
                 OpponentDisconnectedFault fault = new OpponentDisconnectedFault();
                 fault.Detail = "The other Player quit";
                 throw new FaultException<OpponentDisconnectedFault>(fault);
+
             }
-            if (result != MoveResult.NotYourTurn)
+            if (result != MoveResult.NotYourTurn && result != MoveResult.GameOn)
             {
+                using (var ctx = new FIARDBContext())
+                {
+                    var game = (from g in ctx.Games
+                                where g.GameId == gb.game.GameId
+                                select g).FirstOrDefault();
+
+                    game.GameOver = true;
+                    if (username == gb.player1.username)
+                    {
+                        game.Winner_PlayerId = gb.player1.id;
+                        game.Player1Points = 1000 + gb.checkIfAllCollsFilled(gb.player1.username);
+                        game.Player2Points = gb.calcLoserPoints(gb.player2.username) + gb.checkIfAllCollsFilled(gb.player1.username);
+                    }
+                    else
+                    {
+                        game.Winner_PlayerId = gb.player2.id;
+                        game.Player2Points = 1000 + gb.checkIfAllCollsFilled(gb.player2.username);
+                        game.Player1Points = gb.calcLoserPoints(gb.player1.username) + gb.checkIfAllCollsFilled(gb.player1.username);
+                    }
+
+                    ctx.SaveChanges();
+
+                }
+
                 Thread updateOtherPlayerThread = new Thread(() =>
                 {
-                    clients[other_player].OtherPlayerMoved(result, col);
+                    clients[other_player].OtherPlayerMoved(result != MoveResult.YouWon ? result : MoveResult.YouLost, col);
                 });
                 updateOtherPlayerThread.Start();
             }
+
             return result;
         }
 

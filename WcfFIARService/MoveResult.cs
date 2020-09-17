@@ -13,6 +13,8 @@ namespace WcfFIARService
         [EnumMember]
         YouWon,
         [EnumMember]
+        YouLost,
+        [EnumMember]
         Draw,
         [EnumMember]
         NotYourTurn,

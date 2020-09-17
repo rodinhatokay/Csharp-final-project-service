@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.ServiceModel;
@@ -14,6 +15,7 @@ namespace WcfFIARService
 
     class GameBoard
     {
+        public Game game { get; }
         private PlayerColor[,] board;
         public PlayerInfo player1 { get; }
         public PlayerInfo player2 { get; }
@@ -39,7 +41,7 @@ namespace WcfFIARService
 
                 ctx.Games.Add(g);
                 ctx.SaveChanges();
-                Game g2 = g;
+                game = g;
 
             }
         }
@@ -55,7 +57,7 @@ namespace WcfFIARService
             if (row != -1)
             {
                 board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Blue;
-                if (checkIfGameOver(col, row))
+                if (CheckIfGameOver(col, row))
                     return MoveResult.YouWon;
                 turnPlayer1 = !turnPlayer1;
                 return MoveResult.GameOn;
@@ -73,15 +75,15 @@ namespace WcfFIARService
             return -1;
         }
 
-        private bool checkIfGameOver(int col, int row)
+        private bool CheckIfGameOver(int col, int row)
         {
             var leftDig = advInDirection(board[col, row], col, row, 4, -1, -1);
-            var leftDownDig = advInDirection(board[col, row], col, row, 4, -1, -1);// added 
-            var rightDig = advInDirection(board[col, row], col, row, 4, 1, -1);
-            var rightDownDig = advInDirection(board[col, row], col, row, 4, 1, 1);// added
+            var left = advInDirection(board[col, row], col, row, 4, -1, 0);
             var down = advInDirection(board[col, row], col, row, 4, 0, -1);
+            var right = advInDirection(board[col, row], col, row, 4, 1, 0);
+            var rightDig = advInDirection(board[col, row], col, row, 4, 1, -1);
 
-            return leftDig || rightDig || down || leftDownDig || rightDownDig;
+            return leftDig || rightDig || down || right || left;
         }
 
         private bool advInDirection(PlayerColor pc, int col, int row, int count, int directionX, int directionY)
@@ -108,5 +110,45 @@ namespace WcfFIARService
                 p2Connected = false;
         }
 
+
+        public int calcLoserPoints(string username)
+        {
+            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
+            int count = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                for (int j = 0; j < 7; j++)
+                {
+                    if (board[j, i] == c)
+                    {
+                        count++;
+                    }
+                }
+
+            }
+
+            return count * 10;
+        }
+
+        public int checkIfAllCollsFilled(string username)
+        {
+            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
+            int count = 0;
+            for (int i = 0; i < 6; i++)
+            {
+                for (int j = 0; j < 7; j++)
+                {
+                    if (board[j, i] == c)
+                    {
+                        count++;
+                        break;
+                    }
+                }
+
+            }
+
+            return count == 7 ? 100 : 0;
+
+        }
     }
 }
