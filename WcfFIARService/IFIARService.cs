@@ -31,15 +31,12 @@ namespace WcfFIARService
 
         #region searchs
         [OperationContract]
-        [FaultContract(typeof(PlayerDoesntExistInDataBase))]
-        List<PlayerInfo> Search(string username);
+        List<PlayerInfo> GetAllPlayers();
 
         [OperationContract]
-        [FaultContract(typeof(PlayerDoesntExistInDataBase))]
-        List<PlayerInfo> Search(string player1,string player2);
+        List<Game> Search(string player1, string player2);
 
-        [OperationContract]
-        List<PlayerInfo> Search(SearchBy searchBy ,int count);
+
 
         #endregion
 

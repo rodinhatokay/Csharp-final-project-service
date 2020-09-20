@@ -33,9 +33,6 @@ namespace WcfFIARService
                     init(player[0]);
                 }
 
-
-
-
             }
 
         }
@@ -49,13 +46,13 @@ namespace WcfFIARService
             using (var ctx = new FIARDBContext())
             {
                 var allGames = (from g in ctx.Games
-                                where g.Player_PlayerId == player.PlayerId || g.PlayedAgainst_PlayerId == player.PlayerId
+                                where (g.Player_PlayerId == player.PlayerId || g.PlayedAgainst_PlayerId == player.PlayerId) && g.GameOver == true
                                 select g).ToList();
                 PlayedAgainst = new List<string>();
                 foreach (var game in allGames)
                 {
                     PlayedAgainst.Add(game.ToString());
-                    if (game.Player1 == player)
+                    if (game.Player1.UserName == player.UserName)
                     {
                         this.Score += game.Player1Points;
                         if (game.Player1Points > game.Player2Points)
@@ -72,8 +69,11 @@ namespace WcfFIARService
                         else
                             this.Loses++;
                     }
+
+                    Games++;
                 }
             }
+
         }
 
         [DataMember]
@@ -85,6 +85,8 @@ namespace WcfFIARService
 
         [DataMember]
         public int Loses { get; set; }
+        [DataMember]
+        public int Games { get; set; }
         [DataMember]
         public int Score { get; set; }
 

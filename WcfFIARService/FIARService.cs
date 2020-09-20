@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Data.Entity.Core.Common.CommandTrees;
 using System.Data.Entity.Infrastructure;
 using System.Linq;
 using System.Runtime.InteropServices.ComTypes;
@@ -236,13 +237,14 @@ namespace WcfFIARService
 
         }
 
-        public List<PlayerInfo> Search(string username)
+
+        public List<PlayerInfo> GetAllPlayers()
         {
 
             using (var ctx = new FIARDBContext())
             {
                 var players = (from p in ctx.Players
-                               where p.UserName == username
+
                                select p).ToList();
                 List<PlayerInfo> pi = new List<PlayerInfo>();
                 foreach (var player in players)
@@ -253,57 +255,17 @@ namespace WcfFIARService
             }
 
         }
-        public List<PlayerInfo> Search(SearchBy searchBy, int n)
-        {
-            List <Player> players;
-            List<PlayerInfo> pi = new List<PlayerInfo>();
-            using (var ctx = new FIARDBContext())
-            {
-                switch (searchBy)
-                {
-                    case SearchBy.Games:
-                        //
-                        players = (from p in ctx.Players
-                                   where p.Games.Count == n
-                                   select p).ToList();
-                        break;
-                    case SearchBy.Wins:
 
-                        players = (from p in ctx.Players
-                                  where p.GamesWon.Count == n
-                                  select p).ToList();
-                        break;
-                    case SearchBy.Loses:
-
-
-                        break;
-                    default: //search by score
-                        
-                        //players = (from p in ctx.Players
-                        //           where p.Sc
-                        //           select p).ToList();
-                        break;
-                }
-
-                players = (from p in ctx.Players // need to delete 
-                           where p.GamesWon.Count == n
-                           select p).ToList();
-
-                foreach (var player in players)
-                {
-                    pi.Add(new PlayerInfo(player));
-                }
-                return pi;
-            }
-            
-           
-        }
-
-        public List<PlayerInfo> Search(string player1, string player2)
+        public List<Game> Search(string player1, string player2)
         {
             using (var ctx = new FIARDBContext())
             {
-               
+                var games = (from g in ctx.Games
+                             where (g.Player1.UserName == player1 && g.Player2.UserName == player2 ||
+                                   g.Player1.UserName == player2 && g.Player2.UserName == player1)
+                             select g).ToList();
+
+                return games;
             }
         }
     }
