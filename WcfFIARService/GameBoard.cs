@@ -48,7 +48,13 @@ namespace WcfFIARService
 
         public MoveResult VerifyMove(string player, int col)
         {
-
+            //need to check if all filled to make draw
+            //if move result == you won its better to update here database instead outside.
+            if (AllfilledbyPlayers())
+            {
+                EndGame(null);
+                return MoveResult.Draw;
+            }
             if (p1Connected == false || p1Connected == false)
                 return MoveResult.PlayerLeft;
             if (turnPlayer1 && player1.username != player || !turnPlayer1 && player2.username != player)
@@ -58,7 +64,10 @@ namespace WcfFIARService
             {
                 board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Blue;
                 if (CheckIfGameOver(col, row))
+                {
+                    EndGame(player);
                     return MoveResult.YouWon;
+                }
                 turnPlayer1 = !turnPlayer1;
                 return MoveResult.GameOn;
             }
@@ -67,12 +76,69 @@ namespace WcfFIARService
         }
 
 
+        private void EndGame(string player) // draw or the player made move won
+        {
+            if (player == null)// its a draw 
+            {
+                using (var ctx = new FIARDBContext())
+                {
+                    var game = (from g in ctx.Games
+                                where g.GameId == this.game.GameId
+                                select g).FirstOrDefault();
+                    game.GameOver = true;
+                    game.Winner_PlayerId = null;
+                    game.Player2Points = calcLoserPoints(player2.username) + checkIfAllCollsFilled(player2.username);
+                    game.Player1Points = calcLoserPoints(player1.username) + checkIfAllCollsFilled(player1.username);
+                    ctx.SaveChanges();
+                }
+            }
+            else // ther is a winner!
+            {
+                using (var ctx = new FIARDBContext())
+                {
+                    var game = (from g in ctx.Games
+                                where g.GameId == this.game.GameId
+                                select g).FirstOrDefault();
+
+                    game.GameOver = true;
+                    if (player == player1.username)
+                    {
+                        game.Winner_PlayerId = player1.id;
+                        game.Player1Points = 1000 + checkIfAllCollsFilled(player1.username);
+                        game.Player2Points = calcLoserPoints(player2.username) + checkIfAllCollsFilled(player1.username);
+                    }
+                    else
+                    {
+                        game.Winner_PlayerId = player2.id;
+                        game.Player2Points = 1000 + checkIfAllCollsFilled(player2.username);
+                        game.Player1Points = calcLoserPoints(player1.username) + checkIfAllCollsFilled(player1.username);
+                    }
+                    ctx.SaveChanges();
+                }
+            }
+        }
+
         private int getEmptyInCol(int col)
         {
             for (int i = 0; i < 6; i++)
                 if (board[col, i] == PlayerColor.Empty)
                     return i;
             return -1;
+        }
+
+        private bool AllfilledbyPlayers()
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                for (int j = 0; j < 7; j++)
+                {
+                    if (board[j, i] == PlayerColor.Empty)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
         }
 
         private bool CheckIfGameOver(int col, int row)
@@ -149,6 +215,12 @@ namespace WcfFIARService
 
             return count == 7 ? 100 : 0;
 
+        }
+
+        public override bool Equals(object obj) // im not sure if this is correct
+        {
+            var other = obj as GameBoard;
+            return other.game.GameId == this.game.GameId;
         }
     }
 }
