@@ -139,11 +139,11 @@ namespace WcfFIARService
             GameBoard gb = findGame(username);
             string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username;
             MoveResult result = findGame(username).VerifyMove(username, col); //if game ended the game will auto update the database accordinly 
-            if(result == MoveResult.NotYourTurn || result == MoveResult.IlligelMove)
+            if (result == MoveResult.NotYourTurn || result == MoveResult.IlligelMove)
             {
                 return result;
             }
-            
+
             if (result == MoveResult.PlayerLeft)
             {
                 //TODO :update game ended or delete game in db
@@ -151,12 +151,12 @@ namespace WcfFIARService
                 fault.Detail = "The other Player quit";
                 throw new FaultException<OpponentDisconnectedFault>(fault);
             }
-            if(result == MoveResult.Draw || result == MoveResult.YouWon)
+            if (result == MoveResult.Draw || result == MoveResult.YouWon)
             {
-                
+
                 games.Remove(gb);
             }
-            
+
             Thread updateOtherPlayerThread = new Thread(() =>
             {
                 clients[other_player].OtherPlayerMoved(result, col); // result may : Draw, youWon, GameOn, PlayerLeft
@@ -234,6 +234,77 @@ namespace WcfFIARService
                 return false;
             }
 
+        }
+
+        public List<PlayerInfo> Search(string username)
+        {
+
+            using (var ctx = new FIARDBContext())
+            {
+                var players = (from p in ctx.Players
+                               where p.UserName == username
+                               select p).ToList();
+                List<PlayerInfo> pi = new List<PlayerInfo>();
+                foreach (var player in players)
+                {
+                    pi.Add(new PlayerInfo(player));
+                }
+                return pi;
+            }
+
+        }
+        public List<PlayerInfo> Search(SearchBy searchBy, int n)
+        {
+            List <Player> players;
+            List<PlayerInfo> pi = new List<PlayerInfo>();
+            using (var ctx = new FIARDBContext())
+            {
+                switch (searchBy)
+                {
+                    case SearchBy.Games:
+                        //
+                        players = (from p in ctx.Players
+                                   where p.Games.Count == n
+                                   select p).ToList();
+                        break;
+                    case SearchBy.Wins:
+
+                        players = (from p in ctx.Players
+                                  where p.GamesWon.Count == n
+                                  select p).ToList();
+                        break;
+                    case SearchBy.Loses:
+
+
+                        break;
+                    default: //search by score
+                        
+                        //players = (from p in ctx.Players
+                        //           where p.Sc
+                        //           select p).ToList();
+                        break;
+                }
+
+                players = (from p in ctx.Players // need to delete 
+                           where p.GamesWon.Count == n
+                           select p).ToList();
+
+                foreach (var player in players)
+                {
+                    pi.Add(new PlayerInfo(player));
+                }
+                return pi;
+            }
+            
+           
+        }
+
+        public List<PlayerInfo> Search(string player1, string player2)
+        {
+            using (var ctx = new FIARDBContext())
+            {
+               
+            }
         }
     }
 }

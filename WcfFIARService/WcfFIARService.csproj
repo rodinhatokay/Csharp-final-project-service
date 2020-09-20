@@ -83,6 +83,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="FIARService.cs" />
     <Compile Include="CustomFaults.cs" />
+    <Compile Include="SearchBy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
