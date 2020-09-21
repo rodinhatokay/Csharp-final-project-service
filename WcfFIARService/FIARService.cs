@@ -17,15 +17,29 @@ namespace WcfFIARService
           ConcurrencyMode = ConcurrencyMode.Multiple)]
     public class FIARService : IFIARService
     {
+        public delegate void MyHostEventHandler(string msg, DateTime datetime);
 
+        public MyHostEventHandler MyHostEvent;
         Dictionary<string, IFIARSCallback> clients = new Dictionary<string, IFIARSCallback>();
         //Dictionary<string, bool> clientIngame = new Dictionary<string, bool>();
         List<GameBoard> games = new List<GameBoard>();
-
         public FIARService()
         {
+
             Init();
 
+        }
+        public FIARService(MyHostEventHandler MyHostEvent)
+        {
+            this.MyHostEvent = MyHostEvent;
+
+            Init();
+            SendStatusMessageEx("server started");
+        }
+
+        private void SendStatusMessageEx(string msg)
+        {
+            MyHostEvent(msg, DateTime.Now);
         }
 
         public List<PlayerInfo> GetAvalibalePlayers()
@@ -40,6 +54,8 @@ namespace WcfFIARService
                 {
                     pi.Add(new PlayerInfo(player));
                 }
+
+                SendStatusMessageEx("Call : Get Avalibale Players");
                 return pi;
             }
 
@@ -62,6 +78,7 @@ namespace WcfFIARService
 
         public void PlayerLogin(string username, string password)
         {
+            SendStatusMessageEx("Login : player trying to login : " + username);
             using (var ctx = new FIARDBContext())
             {
                 var player = (from p in ctx.Players
@@ -73,6 +90,7 @@ namespace WcfFIARService
                     {
                         Details = "Player " + username + "doesnt exists need to register"
                     };
+                    SendStatusMessageEx("Login : " + username + " Doesnt exist in database");
                     throw new FaultException<PlayerDoesntExistInDataBase>(fault, new FaultReason("Player Doesnt exist in database"));
                 }
                 if (player.Status != 0)
@@ -81,6 +99,7 @@ namespace WcfFIARService
                     {
                         Details = "Player " + username + " already connected"
                     };
+                    SendStatusMessageEx("Login : " + username + " already connected");
                     throw new FaultException<PlayerAlreadyConnectedFault>(userAlreadyConnected, new FaultReason("Player already connected"));
                 }
 
@@ -93,12 +112,14 @@ namespace WcfFIARService
                     cli.UpdateClients(connectedClients);
                 }
                 clients.Add(username, callback);
+                SendStatusMessageEx("Login : " + username + " Loged in!");
                 //clientIngame.Add(username, false);
             }
         }
 
         public void PlayerLogout(string username)
         {
+            SendStatusMessageEx("Logout : " + username + " is trying to logout");
             clients.Remove(username);
             //clientIngame.Remove(username);
             using (var ctx = new FIARDBContext())
@@ -122,6 +143,7 @@ namespace WcfFIARService
 
                 }
             }
+            SendStatusMessageEx("Logout : " + username + " loged out");
         }
 
         private GameBoard findGame(string username)

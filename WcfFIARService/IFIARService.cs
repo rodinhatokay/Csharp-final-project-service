@@ -59,7 +59,6 @@ namespace WcfFIARService
 
 
 
-
     }
     public interface IFIARSCallback
     {
