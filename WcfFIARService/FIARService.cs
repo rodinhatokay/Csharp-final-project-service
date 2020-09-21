@@ -256,7 +256,7 @@ namespace WcfFIARService
 
         }
 
-        public List<Game> Search(string player1, string player2)
+        public List<GameInfo> GetPlayersGames(string player1, string player2)
         {
             using (var ctx = new FIARDBContext())
             {
@@ -264,8 +264,13 @@ namespace WcfFIARService
                              where (g.Player1.UserName == player1 && g.Player2.UserName == player2 ||
                                    g.Player1.UserName == player2 && g.Player2.UserName == player1)
                              select g).ToList();
+                List<GameInfo> gamesLis = new List<GameInfo>();
+                foreach (var g in games)
+                {
+                    gamesLis.Add(new GameInfo(g));
+                }
+                return gamesLis;
 
-                return games;
             }
         }
     }

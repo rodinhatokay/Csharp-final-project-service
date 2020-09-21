@@ -34,7 +34,7 @@ namespace WcfFIARService
         List<PlayerInfo> GetAllPlayers();
 
         [OperationContract]
-        List<Game> Search(string player1, string player2);
+        List<GameInfo> GetPlayersGames(string player1, string player2);
 
 
 
