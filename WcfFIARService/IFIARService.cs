@@ -19,7 +19,8 @@ namespace WcfFIARService
 
         [OperationContract]
         [FaultContract(typeof(OpponentDisconnectedFault))]
-        bool InvatationSend(string from, string to); //receive invite from client to send to client
+        [FaultContract(typeof(OpponentNotAvailableFault))]
+        bool InvitationSend(string fromPlayer, string toPlayer); //receive invite from client to send to client
 
 
 
@@ -37,16 +38,15 @@ namespace WcfFIARService
         List<GameInfo> GetPlayersGames(string player1, string player2);
 
 
-
         #endregion
 
-        [OperationContract]
+        [OperationContract(IsOneWay = true)]
         void PlayerLogout(string username);
 
         [OperationContract]
         void Init();
 
-        [OperationContract]
+        [OperationContract(IsOneWay = true)]
         void Disconnected(string username);//middle game or something
 
 
@@ -60,6 +60,7 @@ namespace WcfFIARService
 
 
     }
+    [ServiceContract]
     public interface IFIARSCallback
     {
         [OperationContract(IsOneWay = false)]
@@ -69,7 +70,10 @@ namespace WcfFIARService
         void OtherPlayerMoved(MoveResult result, int col);
 
         [OperationContract(IsOneWay = true)]
-        void UpdateClients(List<PlayerInfo> players); // update clients list that are not playing
+        void OtherPlayerDisconnected();
+
+        [OperationContract(IsOneWay = true)]
+        void UpdateClients(List<PlayerInfo> players);
 
 
         [OperationContract(IsOneWay = true)]

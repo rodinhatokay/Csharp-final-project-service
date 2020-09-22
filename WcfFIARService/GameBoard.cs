@@ -19,18 +19,24 @@ namespace WcfFIARService
         private PlayerColor[,] board;
         public PlayerInfo player1 { get; }
         public PlayerInfo player2 { get; }
-        private bool p1Connected;
-        public bool p2Connected;
-        private bool turnPlayer1; //TODO: MAYBE MAKE ENUM
+        private bool turnPlayer1;
 
-        public GameBoard(string p1, string p2)
+
+
+
+        public GameBoard(PlayerInfo player1, PlayerInfo player2)
         {
 
-            this.player1 = new PlayerInfo(p1);
-            this.player2 = new PlayerInfo(p2);
-            p1Connected = true;
-            p2Connected = true;
+            this.player1 = player1;
+            this.player2 = player2;
+
+
+
+            player1.Status = Status.Playing;
+            player2.Status = Status.Playing;
+
             board = new PlayerColor[7, 6];
+
             turnPlayer1 = true;
             using (var ctx = new FIARDBContext())
             {
@@ -38,25 +44,20 @@ namespace WcfFIARService
                 g.Player_PlayerId = player1.id;
                 g.PlayedAgainst_PlayerId = player2.id;
                 g.GameStart = DateTime.Now;
-
                 ctx.Games.Add(g);
                 ctx.SaveChanges();
                 game = g;
-
             }
+
+
         }
 
         public MoveResult VerifyMove(string player, int col)
         {
             //need to check if all filled to make draw
             //if move result == you won its better to update here database instead outside.
-            if (AllfilledbyPlayers())
-            {
-                EndGame(null);
-                return MoveResult.Draw;
-            }
-            if (p1Connected == false || p1Connected == false)
-                return MoveResult.PlayerLeft;
+
+
             if (turnPlayer1 && player1.username != player || !turnPlayer1 && player2.username != player)
                 return MoveResult.NotYourTurn;
             int row = getEmptyInCol(col);
@@ -67,6 +68,11 @@ namespace WcfFIARService
                 {
                     EndGame(player);
                     return MoveResult.YouWon;
+                }
+                if (AllfilledbyPlayers())
+                {
+                    EndGame(null);
+                    return MoveResult.Draw;
                 }
                 turnPlayer1 = !turnPlayer1;
                 return MoveResult.GameOn;
@@ -168,12 +174,25 @@ namespace WcfFIARService
             return player1.username == username || player2.username == username;
         }
 
-        public void playerDiscounnected(string username)
+        public void PlayerDisconnected(string username)
         {
+            PlayerInfo winner;
+            PlayerInfo loser;
             if (username == player1.username)
-                p1Connected = false;
-            if (username == player2.username)
-                p2Connected = false;
+            {
+                winner = player2;
+                loser = player1;
+            }
+            else if (username == player2.username)
+            {
+                winner = player1;
+                loser = player2;
+            }
+            else return;
+            winner.Status = Status.Online;
+            loser.Status = Status.Online;
+            EndGame(winner.username);
+            winner.Callback.OtherPlayerDisconnected();
         }
 
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Runtime.Remoting.Messaging;
 using System.Runtime.Serialization;
 using System.ServiceModel;
 using System.Text;
@@ -19,39 +20,77 @@ namespace WcfFIARService
             init(player);
 
         }
-        public PlayerInfo(string UserName)
+        public PlayerInfo(Player player, IFIARSCallback callback)
         {
-            username = UserName;
+            Callback = callback;
+            init(player);
 
+        }
+
+        public PlayerInfo(string username)
+        {
+            init(username);
+
+
+
+        }
+        public PlayerInfo(int id)
+        {
+            init(id);
+        }
+        private void init(int id)
+        {
             using (var ctx = new FIARDBContext())
             {
                 var player = (from pl in ctx.Players
-                              where pl.UserName == UserName
+                              where pl.PlayerId == id
                               select pl).ToList();
                 if (player.Count > 0)
                 {
                     init(player[0]);
+
                 }
-
+                else
+                {
+                    throw new FaultException<PlayerDoesntExistInDataBase>(new PlayerDoesntExistInDataBase(username));
+                }
             }
+        }
+        private void init(string username)
+        {
+            using (var ctx = new FIARDBContext())
+            {
+                var player = (from pl in ctx.Players
+                              where pl.UserName == username
+                              select pl).ToList();
+                if (player.Count > 0)
+                {
+                    init(player[0]);
 
+                }
+                else
+                {
+                    throw new FaultException<PlayerDoesntExistInDataBase>(new PlayerDoesntExistInDataBase(username));
+                }
+            }
         }
         private void init(Player player)
         {
             id = player.PlayerId;
             username = player.UserName;
+            status = (Status)player.Status;
+
             Wins = 0;
             Loses = 0;
             Score = 0;
             using (var ctx = new FIARDBContext())
             {
                 var allGames = (from g in ctx.Games
-                                where (g.Player_PlayerId == player.PlayerId || g.PlayedAgainst_PlayerId == player.PlayerId) && g.GameOver == true
+                                where (g.Player_PlayerId == player.PlayerId || g.PlayedAgainst_PlayerId == player.PlayerId) &&
+                                      g.GameOver == true
                                 select g).ToList();
-                PlayedAgainst = new List<string>();
                 foreach (var game in allGames)
                 {
-                    PlayedAgainst.Add(game.ToString());
                     if (game.Player1.UserName == player.UserName)
                     {
                         this.Score += game.Player1Points;
@@ -70,29 +109,88 @@ namespace WcfFIARService
                             this.Loses++;
                     }
 
-                    Games++;
+
                 }
+                this.Games = allGames.Count;
             }
 
         }
+        public IFIARSCallback Callback { get; set; }
+        [DataMember] public int id { get; set; }
+        [DataMember] public string username { get; set; }
+        [DataMember] public int Wins { get; set; }
+        private Status status;
 
         [DataMember]
-        public int id { get; set; }
-        [DataMember]
-        public string username { get; set; }
-        [DataMember]
-        public int Wins { get; set; }
+        public Status Status
+        {
+            get { return status; }
+            set { status = ChangeStatus(value); }
+        }
+
+        [DataMember] public int Loses { get; set; }
+        [DataMember] public int Games { get; set; }
+        [DataMember] public int Score { get; set; }
 
         [DataMember]
-        public int Loses { get; set; }
-        [DataMember]
-        public int Games { get; set; }
-        [DataMember]
-        public int Score { get; set; }
+        public List<string> PlayedAgainst
+        {
+            get { return GenertatePlayedAgainstList(); }
+            set { }
+        }
 
-        [DataMember]
-        public List<string> PlayedAgainst { get; set; }
+        private List<string> GenertatePlayedAgainstList()
+        {
+            using (var ctx = new FIARDBContext())
+            {
+                var allGames = (from g in ctx.Games
+                                where (g.Player_PlayerId == this.id || g.PlayedAgainst_PlayerId == this.id) &&
+                                      g.GameOver == true
+                                select g).ToList();
+                var playedAgainst = new List<string>();
+                foreach (var game in allGames)
+                {
+                    var gi = new GameInfo(game);
 
+                    playedAgainst.Add(gi.getPlayerStats(id));
+                }
 
+                return playedAgainst;
+            }
+
+        }
+        private Status ChangeStatus(Status s)
+        {
+
+            using (var ctx = new FIARDBContext())
+            {
+                var player = (from pl in ctx.Players
+                              where pl.UserName == username
+                              select pl).FirstOrDefault();
+                player.Status = (int)s;
+                ctx.SaveChanges();
+            }
+
+            return s;
+
+        }
+
+        public void Refresh()
+        {
+            init(username);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj != null)
+                return this.id == ((PlayerInfo)obj).id;
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return 15235000;
+        }
     }
+
 }

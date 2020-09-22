@@ -34,5 +34,38 @@ namespace WcfFIARService
         public int Player1Points { get; set; }
         [DataMember]
         public int Player2Points { get; set; }
+
+        public string getPlayerStats(int id)
+        {
+            var player1 = new PlayerInfo(Player1_id);
+            var player2 = new PlayerInfo(Player2_id);
+
+            if (id == Player1_id)
+            {
+                string str = "played against " + player2.username + " and ";
+                if (Winner_id == Player1_id)
+                    str += "won";
+                else if (Winner_id == Player2_id)
+                    str += "lost";
+                else
+                    str += "draw";
+                return str;
+
+            }
+            else
+            {
+                string str = "played against " + player1.username + " and ";
+                if (Winner_id == Player2_id)
+                    str += "won";
+                else if (Winner_id == Player1_id)
+                    str += "lost";
+                else
+                    str += "draw";
+
+                return str;
+            }
+
+
+        }
     }
 }

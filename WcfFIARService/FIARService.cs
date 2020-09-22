@@ -20,8 +20,9 @@ namespace WcfFIARService
         public delegate void MyHostEventHandler(string msg, DateTime datetime);
 
         public MyHostEventHandler MyHostEvent;
-        Dictionary<string, IFIARSCallback> clients = new Dictionary<string, IFIARSCallback>();
-        //Dictionary<string, bool> clientIngame = new Dictionary<string, bool>();
+        //Dictionary<string, IFIARSCallback> clients = new Dictionary<string, IFIARSCallback>();
+        private List<PlayerInfo> playersOnline;
+
         List<GameBoard> games = new List<GameBoard>();
         public FIARService()
         {
@@ -35,11 +36,13 @@ namespace WcfFIARService
 
             Init();
             SendStatusMessageEx("server started");
+
         }
 
         private void SendStatusMessageEx(string msg)
         {
-            MyHostEvent(msg, DateTime.Now);
+            if (MyHostEvent != null)
+                MyHostEvent(msg, DateTime.Now);
         }
 
         public List<PlayerInfo> GetAvalibalePlayers()
@@ -63,6 +66,7 @@ namespace WcfFIARService
 
         public void Init()
         {
+            playersOnline = new List<PlayerInfo>();
             using (var ctx = new FIARDBContext())
             {
                 var players = (from p in ctx.Players
@@ -74,6 +78,7 @@ namespace WcfFIARService
                 }
                 ctx.SaveChanges();
             }
+
         }
 
         public void PlayerLogin(string username, string password)
@@ -86,64 +91,48 @@ namespace WcfFIARService
                               select p).FirstOrDefault();
                 if (player == null)
                 {
-                    PlayerDoesntExistInDataBase fault = new PlayerDoesntExistInDataBase
-                    {
-                        Details = "Player " + username + "doesnt exists need to register"
-                    };
-                    SendStatusMessageEx("Login : " + username + " Doesnt exist in database");
-                    throw new FaultException<PlayerDoesntExistInDataBase>(fault, new FaultReason("Player Doesnt exist in database"));
+                    var f = new PlayerDoesntExistInDataBase(username);
+                    SendStatusMessageEx(f.Details);
+                    throw new FaultException<PlayerDoesntExistInDataBase>(f);
                 }
                 if (player.Status != 0)
                 {
-                    PlayerAlreadyConnectedFault userAlreadyConnected = new PlayerAlreadyConnectedFault
-                    {
-                        Details = "Player " + username + " already connected"
-                    };
-                    SendStatusMessageEx("Login : " + username + " already connected");
-                    throw new FaultException<PlayerAlreadyConnectedFault>(userAlreadyConnected, new FaultReason("Player already connected"));
+                    PlayerAlreadyConnectedFault f = new PlayerAlreadyConnectedFault(username);
+                    SendStatusMessageEx(f.Details);
+                    throw new FaultException<PlayerAlreadyConnectedFault>(f);
                 }
 
                 player.Status = 1;
                 ctx.SaveChanges();
                 IFIARSCallback callback = OperationContext.Current.GetCallbackChannel<IFIARSCallback>();
-                var connectedClients = GetAvalibalePlayers();
-                foreach (var cli in clients.Values)// send to all others to update thier list
-                {
-                    cli.UpdateClients(connectedClients);
-                }
-                clients.Add(username, callback);
+
+
+                playersOnline.ForEach(p => p.Callback.UpdateClients(GetAvalibalePlayers()));
+
+                playersOnline.Add(new PlayerInfo(player, callback));
+
+
+
                 SendStatusMessageEx("Login : " + username + " Loged in!");
-                //clientIngame.Add(username, false);
+
             }
         }
 
         public void PlayerLogout(string username)
         {
-            SendStatusMessageEx("Logout : " + username + " is trying to logout");
-            clients.Remove(username);
-            //clientIngame.Remove(username);
-            using (var ctx = new FIARDBContext())
-            {
-                var player = (from p in ctx.Players
-                              where p.UserName == username
-                              select p).FirstOrDefault();
-                player.Status = 0;
-                ctx.SaveChanges();
-            }
-            games.ForEach(g => g.playerDiscounnected(username));
-            var connectedClients = GetAvalibalePlayers();
-            foreach (var client in clients)
-            {
-                try
-                {
-                    client.Value.UpdateClients(connectedClients); // need to surrond with try and catch i think to 
-                }
-                catch (Exception ex)
-                {
 
-                }
-            }
-            SendStatusMessageEx("Logout : " + username + " loged out");
+            SendStatusMessageEx("Logout : " + username + " is trying to logout");
+            //clients.Remove(username);
+
+            games.ForEach(g => g.PlayerDisconnected(username));
+            games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
+
+            var player = GetConnectedPlayer(username);
+            player.Status = Status.Disconnected;
+            playersOnline.Remove(player);
+            playersOnline.ForEach(p => p.Callback.UpdateClients(GetAvalibalePlayers()));
+
+
         }
 
         private GameBoard findGame(string username)
@@ -159,36 +148,49 @@ namespace WcfFIARService
         }
         public MoveResult ReportMove(string username, int col)
         {
-            GameBoard gb = findGame(username);
-            string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username;
-            MoveResult result = findGame(username).VerifyMove(username, col); //if game ended the game will auto update the database accordinly 
-            if (result == MoveResult.NotYourTurn || result == MoveResult.IlligelMove)
+            try
             {
+
+                //var reporter = GetConnectedPlayer(username);
+                GameBoard gb = findGame(username);
+                string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username;
+                var otherPlayer = GetConnectedPlayer(other_player);
+
+
+
+                MoveResult result = gb.VerifyMove(username, col); //if game ended the game will auto update the database accordinly 
+                SendStatusMessageEx(result.ToString());
+                if (result == MoveResult.NotYourTurn || result == MoveResult.IlligelMove)
+                {
+                    return result;
+                }
+
+                if (result == MoveResult.Draw || result == MoveResult.YouWon)
+                {
+                    games.Remove(gb);
+
+                }
+
+
+                Thread updateOtherPlayerThread = new Thread(() =>
+                {
+                    otherPlayer.Callback
+                        .OtherPlayerMoved(result, col); // result may : Draw, youWon, GameOn, PlayerLeft
+                });
+                updateOtherPlayerThread.Start();
+                SendStatusMessageEx(username + " made a move against " + other_player);
                 return result;
             }
-
-            if (result == MoveResult.PlayerLeft)
+            catch (Exception ex)
             {
-                //TODO :update game ended or delete game in db
-                OpponentDisconnectedFault fault = new OpponentDisconnectedFault();
-                fault.Detail = "The other Player quit";
-                throw new FaultException<OpponentDisconnectedFault>(fault);
-            }
-            if (result == MoveResult.Draw || result == MoveResult.YouWon)
-            {
-
-                games.Remove(gb);
+                SendStatusMessageEx(ex.Message);
+                return MoveResult.PlayerLeft;
             }
 
-            Thread updateOtherPlayerThread = new Thread(() =>
-            {
-                clients[other_player].OtherPlayerMoved(result, col); // result may : Draw, youWon, GameOn, PlayerLeft
-            });
-            updateOtherPlayerThread.Start();
 
 
 
-            return result;
+
         }
 
         public void RegisterPlayer(string username, string pass)
@@ -212,11 +214,9 @@ namespace WcfFIARService
                     }
                     else
                     {
-                        PlayerAlreadyExistsInDataBase fault = new PlayerAlreadyExistsInDataBase
-                        {
-                            Details = "User already exists in data base"
-                        };
-                        throw new FaultException<PlayerAlreadyExistsInDataBase>(fault);
+                        var f = new PlayerAlreadyExistsInDataBase();
+                        SendStatusMessageEx(f.Details);
+                        throw new FaultException<PlayerAlreadyExistsInDataBase>(f);
                     }
                 }
             }
@@ -226,36 +226,66 @@ namespace WcfFIARService
             }
             catch (Exception ex)
             {
+                SendStatusMessageEx(ex.Message);
                 throw new FaultException(ex.Message);
             }
         }
 
         public void Disconnected(string username)
         {
-            return;
-        }
-
-        public bool InvatationSend(string from, string to)
-        {
-            //var other_player = clients[to];
-            if (!clients.ContainsKey(to))
+            try
             {
-                OpponentDisconnectedFault fault = new OpponentDisconnectedFault();
-                fault.Detail = "The Player is offline";
-                throw new FaultException<OpponentDisconnectedFault>(fault);
+                SendStatusMessageEx("Disconnected : " + username + " is trying to Disconnect");
+                PlayerInfo player = GetConnectedPlayer(username);
+
+                games.ForEach(g => g.PlayerDisconnected(username));
+                games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
+                foreach (var p in playersOnline)
+                {
+                    p.Callback.UpdateClients(GetAvalibalePlayers());
+                    SendStatusMessageEx("sent refresh to  : " + p.username);
+                }
+
+
+                SendStatusMessageEx("Disconnected : " + username + " Disconnected");
+                return;
+            }
+            catch (Exception ex)
+            {
+                SendStatusMessageEx(ex.Message);
+
             }
 
-            var result = clients[to].SendInvite(from);
+        }
+
+        public bool InvitationSend(string fromPlayer, string toPlayer)
+        {
+            var player1 = GetConnectedPlayer(fromPlayer);
+            var player2 = GetConnectedPlayer(toPlayer);
+
+            if (player2.Status != Status.Online)
+            {
+                OpponentNotAvailableFault fault = new OpponentNotAvailableFault();
+                SendStatusMessageEx(fault.Details);
+                throw new FaultException<OpponentNotAvailableFault>(fault);
+            }
+
+
+
+            var result = player2.Callback.SendInvite(fromPlayer);
             if (result == true)
             {
-                GameBoard g = new GameBoard(from, to);
+                GameBoard g = new GameBoard(player1, player2);
                 games.Add(g);
+                //TODO:NEED FIXING
+                //playersOnline.ForEach(p => p.Callback.UpdateClients(GetAvalibalePlayers()));
                 return true;
             }
             else
             {
                 return false;
             }
+
 
         }
 
@@ -294,6 +324,17 @@ namespace WcfFIARService
                 return gamesLis;
 
             }
+        }
+
+        private PlayerInfo GetConnectedPlayer(string username)
+        {
+            var res = playersOnline.Find(x => x.username == username);
+            if (res.username != username)
+            {
+                throw new FaultException<PlayerDoesntExistInDataBase>(new PlayerDoesntExistInDataBase(username));
+            }
+
+            return res;
         }
     }
 }
