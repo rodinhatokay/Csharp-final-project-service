@@ -70,7 +70,7 @@ namespace WcfFIARService
             using (var ctx = new FIARDBContext())
             {
                 var players = (from p in ctx.Players
-                               where p.Status == 1
+                               where p.Status == 1 && p.Status == 2
                                select p).ToList();
                 foreach (var player in players)
                 {
@@ -168,6 +168,13 @@ namespace WcfFIARService
                 if (result == MoveResult.Draw || result == MoveResult.YouWon)
                 {
                     games.Remove(gb);
+                    foreach (var p in playersOnline)
+                    {
+                        if (p.username != username && p.username != other_player)
+                        {
+                            p.Callback.UpdateClients(GetAvalibalePlayers());
+                        }
+                    }
 
                 }
 
@@ -242,8 +249,11 @@ namespace WcfFIARService
                 games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
                 foreach (var p in playersOnline)
                 {
-                    p.Callback.UpdateClients(GetAvalibalePlayers());
-                    SendStatusMessageEx("sent refresh to  : " + p.username);
+                    if(p.username != username)
+                    { 
+                        p.Callback.UpdateClients(GetAvalibalePlayers());
+                        SendStatusMessageEx("sent refresh to  : " + p.username);
+                    }
                 }
 
 
@@ -278,7 +288,21 @@ namespace WcfFIARService
                 GameBoard g = new GameBoard(player1, player2);
                 games.Add(g);
                 //TODO:NEED FIXING
-                //playersOnline.ForEach(p => p.Callback.UpdateClients(GetAvalibalePlayers()));
+                //playersOnline.ForEach(p => player1.id == p.id ? == return :  p.Callback.UpdateClients(GetAvalibalePlayers()));
+
+                //Thread updateallplayers = new Thread(() =>
+                // {
+                foreach (var p in playersOnline)
+                {
+                    if (p.id != player1.id && p.id != player2.id)
+                    {
+                        p.Callback.UpdateClients(GetAvalibalePlayers());
+                    }
+                }
+                // });
+                //updateallplayers.Start();
+
+
                 return true;
             }
             else
@@ -343,15 +367,15 @@ namespace WcfFIARService
             using (var ctx = new FIARDBContext())
             {
                 var games = (from g in ctx.Games
-                             where g.GameOver == true 
+                             where g.GameOver == true
                              select g).ToList();
-                foreach(var g in games)
+                foreach (var g in games)
                 {
                     gamesList.Add(new GameInfo(g));
                 }
                 return gamesList;
             }
-            
+
         }
 
         public List<GameInfo> GetOngoingGames()
