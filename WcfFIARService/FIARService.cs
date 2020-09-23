@@ -336,5 +336,38 @@ namespace WcfFIARService
 
             return res;
         }
+
+        public List<GameInfo> GetEndedGames()
+        {
+            List<GameInfo> gamesList = new List<GameInfo>();
+            using (var ctx = new FIARDBContext())
+            {
+                var games = (from g in ctx.Games
+                             where g.GameOver == true 
+                             select g).ToList();
+                foreach(var g in games)
+                {
+                    gamesList.Add(new GameInfo(g));
+                }
+                return gamesList;
+            }
+            
+        }
+
+        public List<GameInfo> GetOngoingGames()
+        {
+            List<GameInfo> gamesList = new List<GameInfo>();
+            using (var ctx = new FIARDBContext())
+            {
+                var games = (from g in ctx.Games
+                             where g.GameOver == false
+                             select g).ToList();
+                foreach (var g in games)
+                {
+                    gamesList.Add(new GameInfo(g));
+                }
+                return gamesList;
+            }
+        }
     }
 }

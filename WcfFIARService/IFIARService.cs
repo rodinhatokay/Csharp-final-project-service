@@ -29,6 +29,8 @@ namespace WcfFIARService
         [FaultContract(typeof(PlayerAlreadyConnectedFault))]
         void PlayerLogin(string username, string password);
 
+        
+
 
         #region searchs
         [OperationContract]
@@ -57,6 +59,11 @@ namespace WcfFIARService
         [OperationContract]
         List<PlayerInfo> GetAvalibalePlayers();
 
+        [OperationContract]
+        List<GameInfo> GetEndedGames();
+
+        [OperationContract]
+        List<GameInfo> GetOngoingGames();
 
 
     }
