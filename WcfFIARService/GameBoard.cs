@@ -29,9 +29,6 @@ namespace WcfFIARService
 
             this.player1 = player1;
             this.player2 = player2;
-
-
-
             player1.Status = Status.Playing;
             player2.Status = Status.Playing;
 

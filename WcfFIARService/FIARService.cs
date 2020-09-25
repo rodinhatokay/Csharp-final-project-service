@@ -70,12 +70,12 @@ namespace WcfFIARService
             using (var ctx = new FIARDBContext())
             {
                 var players = (from p in ctx.Players
-                               where p.Status == 1 && p.Status == 2
                                select p).ToList();
                 foreach (var player in players)
                 {
                     player.Status = 0;
                 }
+                SendStatusMessageEx("reseting players status");
                 ctx.SaveChanges();
             }
 
@@ -193,11 +193,6 @@ namespace WcfFIARService
                 SendStatusMessageEx(ex.Message);
                 return MoveResult.PlayerLeft;
             }
-
-
-
-
-
         }
 
         public void RegisterPlayer(string username, string pass)
@@ -263,7 +258,6 @@ namespace WcfFIARService
             catch (Exception ex)
             {
                 SendStatusMessageEx(ex.Message);
-
             }
 
         }
@@ -287,11 +281,7 @@ namespace WcfFIARService
             {
                 GameBoard g = new GameBoard(player1, player2);
                 games.Add(g);
-                //TODO:NEED FIXING
-                //playersOnline.ForEach(p => player1.id == p.id ? == return :  p.Callback.UpdateClients(GetAvalibalePlayers()));
-
-                //Thread updateallplayers = new Thread(() =>
-                // {
+               
                 foreach (var p in playersOnline)
                 {
                     if (p.id != player1.id && p.id != player2.id)
@@ -299,10 +289,6 @@ namespace WcfFIARService
                         p.Callback.UpdateClients(GetAvalibalePlayers());
                     }
                 }
-                // });
-                //updateallplayers.Start();
-
-
                 return true;
             }
             else
@@ -391,6 +377,28 @@ namespace WcfFIARService
                     gamesList.Add(new GameInfo(g));
                 }
                 return gamesList;
+            }
+        }
+
+
+        public void SetAsAvailablePlayer(string username)
+        {
+            using(var ctx = new FIARDBContext())
+            {
+                var player = (from p in ctx.Players
+                              where p.UserName == username
+                              select p).First();
+                player.Status = 1;
+                ctx.SaveChanges();
+            }
+            foreach(var p in playersOnline)
+            {
+                if(p.username != username)
+                    p.Callback.UpdateClients(GetAvalibalePlayers());
+                else
+                {
+                    p.Status = Status.Online;
+                }
             }
         }
     }

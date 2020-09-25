@@ -29,7 +29,9 @@ namespace WcfFIARService
         [FaultContract(typeof(PlayerAlreadyConnectedFault))]
         void PlayerLogin(string username, string password);
 
-        
+
+        [OperationContract]
+        void SetAsAvailablePlayer(string username);
 
 
         #region searchs
