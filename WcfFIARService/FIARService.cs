@@ -1,15 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Common;
-using System.Data.Entity.Core.Common.CommandTrees;
-using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Runtime.InteropServices.ComTypes;
-using System.Runtime.Serialization;
 using System.ServiceModel;
-using System.ServiceModel.Security;
-using System.Text;
 using System.Threading;
+
 
 namespace WcfFIARService
 {
@@ -20,19 +14,19 @@ namespace WcfFIARService
         public delegate void MyHostEventHandler(string msg, DateTime datetime);
 
         public MyHostEventHandler MyHostEvent;
-        //Dictionary<string, IFIARSCallback> clients = new Dictionary<string, IFIARSCallback>();
-        private List<PlayerInfo> playersOnline;
+        Dictionary<PlayerInfo, IFIARSCallback> clients = new Dictionary<PlayerInfo, IFIARSCallback>();
+        //private List<PlayerInfo> playersOnline;
 
         List<GameBoard> games = new List<GameBoard>();
         public FIARService()
         {
-
             Init();
-
         }
         public FIARService(MyHostEventHandler MyHostEvent)
         {
             this.MyHostEvent = MyHostEvent;
+
+
 
             Init();
             SendStatusMessageEx("server started");
@@ -66,7 +60,7 @@ namespace WcfFIARService
 
         public void Init()
         {
-            playersOnline = new List<PlayerInfo>();
+            clients = new Dictionary<PlayerInfo, IFIARSCallback>();
             using (var ctx = new FIARDBContext())
             {
                 var players = (from p in ctx.Players
@@ -75,7 +69,6 @@ namespace WcfFIARService
                 {
                     player.Status = 0;
                 }
-                SendStatusMessageEx("reseting players status");
                 ctx.SaveChanges();
             }
 
@@ -83,7 +76,6 @@ namespace WcfFIARService
 
         public void PlayerLogin(string username, string password)
         {
-            SendStatusMessageEx("Login : player trying to login : " + username);
             using (var ctx = new FIARDBContext())
             {
                 var player = (from p in ctx.Players
@@ -105,11 +97,14 @@ namespace WcfFIARService
                 player.Status = 1;
                 ctx.SaveChanges();
                 IFIARSCallback callback = OperationContext.Current.GetCallbackChannel<IFIARSCallback>();
+                var getPlayers = GetAvalibalePlayers();
+                foreach (var c in clients)
+                {
+                    c.Value.UpdateClients(getPlayers);
+                }
 
+                clients.Add(new PlayerInfo(player), callback);
 
-                playersOnline.ForEach(p => p.Callback.UpdateClients(GetAvalibalePlayers()));
-
-                playersOnline.Add(new PlayerInfo(player, callback));
 
 
 
@@ -123,14 +118,25 @@ namespace WcfFIARService
 
             SendStatusMessageEx("Logout : " + username + " is trying to logout");
             //clients.Remove(username);
+            foreach (var g in games)
+            {
+                var winner = g.PlayerDisconnected(username);
+                if (winner != null)
+                    clients[winner].OtherPlayerDisconnected();
 
-            games.ForEach(g => g.PlayerDisconnected(username));
+            }
+
             games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
 
             var player = GetConnectedPlayer(username);
             player.Status = Status.Disconnected;
-            playersOnline.Remove(player);
-            playersOnline.ForEach(p => p.Callback.UpdateClients(GetAvalibalePlayers()));
+            clients.Remove(player);
+
+            var getPlayers = GetAvalibalePlayers();
+            foreach (var c in clients)
+            {
+                c.Value.UpdateClients(getPlayers);
+            }
 
 
         }
@@ -168,23 +174,20 @@ namespace WcfFIARService
                 if (result == MoveResult.Draw || result == MoveResult.YouWon)
                 {
                     games.Remove(gb);
-                    foreach (var p in playersOnline)
+                    foreach (var p in clients)
                     {
-                        if (p.username != username && p.username != other_player)
+                        if (p.Key.username != username && p.Key.username != other_player)
                         {
-                            p.Callback.UpdateClients(GetAvalibalePlayers());
+                            p.Value.UpdateClients(GetAvalibalePlayers());
                         }
                     }
 
                 }
 
+                clients[otherPlayer].OtherPlayerMoved(result, col);
 
-                Thread updateOtherPlayerThread = new Thread(() =>
-                {
-                    otherPlayer.Callback
-                        .OtherPlayerMoved(result, col); // result may : Draw, youWon, GameOn, PlayerLeft
-                });
-                updateOtherPlayerThread.Start();
+
+
                 SendStatusMessageEx(username + " made a move against " + other_player);
                 return result;
             }
@@ -240,14 +243,20 @@ namespace WcfFIARService
                 SendStatusMessageEx("Disconnected : " + username + " is trying to Disconnect");
                 PlayerInfo player = GetConnectedPlayer(username);
 
-                games.ForEach(g => g.PlayerDisconnected(username));
-                games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
-                foreach (var p in playersOnline)
+                foreach (var g in games)
                 {
-                    if(p.username != username)
-                    { 
-                        p.Callback.UpdateClients(GetAvalibalePlayers());
-                        SendStatusMessageEx("sent refresh to  : " + p.username);
+                    var winner = g.PlayerDisconnected(username);
+                    if (winner != null)
+                        clients[winner].OtherPlayerDisconnected();
+
+                }
+                games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
+                foreach (var p in clients)
+                {
+                    if (p.Key.username != username)
+                    {
+                        p.Value.UpdateClients(GetAvalibalePlayers());
+                        SendStatusMessageEx("sent refresh to  : " + p.Key.username);
                     }
                 }
 
@@ -276,17 +285,17 @@ namespace WcfFIARService
 
 
 
-            var result = player2.Callback.SendInvite(fromPlayer);
+            var result = clients[player2].SendInvite(fromPlayer);
             if (result == true)
             {
                 GameBoard g = new GameBoard(player1, player2);
                 games.Add(g);
-               
-                foreach (var p in playersOnline)
+                var pl = GetAvalibalePlayers();
+                foreach (var p in clients)
                 {
-                    if (p.id != player1.id && p.id != player2.id)
+                    if (p.Key.id != player1.id && p.Key.id != player2.id)
                     {
-                        p.Callback.UpdateClients(GetAvalibalePlayers());
+                        p.Value.UpdateClients(pl);
                     }
                 }
                 return true;
@@ -338,13 +347,13 @@ namespace WcfFIARService
 
         private PlayerInfo GetConnectedPlayer(string username)
         {
-            var res = playersOnline.Find(x => x.username == username);
-            if (res.username != username)
-            {
-                throw new FaultException<PlayerDoesntExistInDataBase>(new PlayerDoesntExistInDataBase(username));
-            }
 
-            return res;
+            foreach (var p in clients)
+            {
+                if (p.Key.username == username)
+                    return p.Key;
+            }
+            throw new FaultException<PlayerDoesntExistInDataBase>(new PlayerDoesntExistInDataBase(username));
         }
 
         public List<GameInfo> GetEndedGames()
@@ -383,22 +392,25 @@ namespace WcfFIARService
 
         public void SetAsAvailablePlayer(string username)
         {
-            using(var ctx = new FIARDBContext())
+            var player = clients.Keys.FirstOrDefault(x => x.username == username);
+            player.Status = Status.Online;
+
+            foreach (var p in clients)
             {
-                var player = (from p in ctx.Players
-                              where p.UserName == username
-                              select p).First();
-                player.Status = 1;
-                ctx.SaveChanges();
-            }
-            foreach(var p in playersOnline)
-            {
-                if(p.username != username)
-                    p.Callback.UpdateClients(GetAvalibalePlayers());
-                else
+                try
                 {
-                    p.Status = Status.Online;
+                    if (p.Key.username != username)
+                        p.Value.UpdateClients(GetAvalibalePlayers());
+                    else
+                    {
+                        p.Key.Status = Status.Online;
+                    }
                 }
+                catch (TimeoutException ex)
+                {
+                    this.PlayerLogout(p.Key.username);
+                }
+
             }
         }
     }

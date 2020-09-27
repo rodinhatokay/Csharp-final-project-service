@@ -20,12 +20,6 @@ namespace WcfFIARService
             init(player);
 
         }
-        public PlayerInfo(Player player, IFIARSCallback callback)
-        {
-            Callback = callback;
-            init(player);
-
-        }
 
         public PlayerInfo(string username)
         {
@@ -115,7 +109,6 @@ namespace WcfFIARService
             }
 
         }
-        public IFIARSCallback Callback { get; set; }
         [DataMember] public int id { get; set; }
         [DataMember] public string username { get; set; }
         [DataMember] public int Wins { get; set; }

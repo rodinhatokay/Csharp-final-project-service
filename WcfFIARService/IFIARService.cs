@@ -30,7 +30,7 @@ namespace WcfFIARService
         void PlayerLogin(string username, string password);
 
 
-        [OperationContract]
+        [OperationContract(IsOneWay = true)]
         void SetAsAvailablePlayer(string username);
 
 
@@ -72,7 +72,7 @@ namespace WcfFIARService
     [ServiceContract]
     public interface IFIARSCallback
     {
-        [OperationContract(IsOneWay = false)]
+        [OperationContract]
         bool SendInvite(string username); // send invite to client
 
         [OperationContract(IsOneWay = true)]
@@ -87,6 +87,9 @@ namespace WcfFIARService
 
         [OperationContract(IsOneWay = true)]
         void StartGame();
+
+        [OperationContract]
+        bool IsAlive();
 
     }
 }

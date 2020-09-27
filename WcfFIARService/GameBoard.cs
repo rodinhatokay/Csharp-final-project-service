@@ -171,7 +171,7 @@ namespace WcfFIARService
             return player1.username == username || player2.username == username;
         }
 
-        public void PlayerDisconnected(string username)
+        public PlayerInfo PlayerDisconnected(string username)
         {
             PlayerInfo winner;
             PlayerInfo loser;
@@ -185,11 +185,12 @@ namespace WcfFIARService
                 winner = player1;
                 loser = player2;
             }
-            else return;
+            else
+                return null;
             winner.Status = Status.Online;
             loser.Status = Status.Online;
             EndGame(winner.username);
-            winner.Callback.OtherPlayerDisconnected();
+            return winner;
         }
 
 
