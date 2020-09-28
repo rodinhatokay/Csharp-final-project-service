@@ -3,17 +3,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
+using System.Threading.Tasks;
 
 
 namespace WcfFIARService
 {
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
           ConcurrencyMode = ConcurrencyMode.Multiple)]
+
+
+
+
     public class FIARService : IFIARService
+
+
+
     {
         public delegate void MyHostEventHandler(string msg, DateTime datetime);
 
-        public MyHostEventHandler MyHostEvent;
+
+        MyHostEventHandler _myHostEvent;
         Dictionary<PlayerInfo, IFIARSCallback> clients = new Dictionary<PlayerInfo, IFIARSCallback>();
         //private List<PlayerInfo> playersOnline;
 
@@ -24,8 +33,11 @@ namespace WcfFIARService
         }
         public FIARService(MyHostEventHandler MyHostEvent)
         {
-            this.MyHostEvent = MyHostEvent;
+            this._myHostEvent = MyHostEvent;
+            Task t = new Task(() =>
+            {
 
+            });
 
 
             Init();
@@ -35,8 +47,8 @@ namespace WcfFIARService
 
         private void SendStatusMessageEx(string msg)
         {
-            if (MyHostEvent != null)
-                MyHostEvent(msg, DateTime.Now);
+            if (_myHostEvent != null)
+                _myHostEvent(msg, DateTime.Now);
         }
 
         public List<PlayerInfo> GetAvalibalePlayers()
@@ -58,20 +70,31 @@ namespace WcfFIARService
 
         }
 
-        public void Init()
+        private void Init()
         {
             clients = new Dictionary<PlayerInfo, IFIARSCallback>();
             using (var ctx = new FIARDBContext())
             {
+                //making all players offline before server starts
                 var players = (from p in ctx.Players
                                select p).ToList();
                 foreach (var player in players)
                 {
                     player.Status = 0;
                 }
+                //Removes all games that didn't ended in case server crashed
+                var gTmp = (from g in ctx.Games
+                            where g.Player1Points == 0 && g.Player2Points == 0
+                            select g).ToList();
+                foreach (var g in gTmp)
+                {
+                    ctx.Games.Remove(g);
+                }
+
                 ctx.SaveChanges();
             }
 
+            checkEveryOne();
         }
 
         public void PlayerLogin(string username, string password)
@@ -116,27 +139,37 @@ namespace WcfFIARService
         public void PlayerLogout(string username)
         {
 
-            SendStatusMessageEx("Logout : " + username + " is trying to logout");
+            try
+            {
+                foreach (var g in games)
+                {
+                    var winner = g.PlayerDisconnected(username);
+                    if (winner != null)
+                        clients[winner].OtherPlayerDisconnected();
+
+                }
+
+                games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
+
+                var player = GetConnectedPlayer(username);
+                player.Status = Status.Disconnected;
+                clients.Remove(player);
+                SendStatusMessageEx("Logout : " + username + " is sending messages");
+                var getPlayers = GetAvalibalePlayers();
+                foreach (var c in clients)
+                {
+                    SendStatusMessageEx("updating : " + c.Key.username + " is been updated");
+                    c.Value.UpdateClients(getPlayers);
+                }
+
+                SendStatusMessageEx("Logout : " + username + " is loged out");
+
+            }
+            catch (Exception ex)
+            {
+                SendStatusMessageEx(ex.Message);
+            }
             //clients.Remove(username);
-            foreach (var g in games)
-            {
-                var winner = g.PlayerDisconnected(username);
-                if (winner != null)
-                    clients[winner].OtherPlayerDisconnected();
-
-            }
-
-            games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
-
-            var player = GetConnectedPlayer(username);
-            player.Status = Status.Disconnected;
-            clients.Remove(player);
-
-            var getPlayers = GetAvalibalePlayers();
-            foreach (var c in clients)
-            {
-                c.Value.UpdateClients(getPlayers);
-            }
 
 
         }
@@ -187,7 +220,6 @@ namespace WcfFIARService
                 clients[otherPlayer].OtherPlayerMoved(result, col);
 
 
-
                 SendStatusMessageEx(username + " made a move against " + other_player);
                 return result;
             }
@@ -198,6 +230,50 @@ namespace WcfFIARService
             }
         }
 
+        private void checkEveryOne()
+        {
+            Thread t = new Thread(() =>
+            {
+                while (true)
+                {
+                    foreach (var c in clients)
+                    {
+
+                        IsAlive(c.Key);
+                    }
+                    Thread.Sleep(10000);
+                }
+            });
+            t.Start();
+
+
+
+
+        }
+        private async void IsAlive(PlayerInfo player)
+        {
+            var callback = clients[player];
+            bool exp = false;
+            await Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    callback.IsAlive();
+                }
+                catch (Exception ex)
+                {
+
+                    exp = true;
+                }
+
+            });
+            if (exp)
+            {
+                PlayerLogout(player.username);
+                SendStatusMessageEx(player.username + " lost connection");
+            }
+
+        }
         public void RegisterPlayer(string username, string pass)
         {
 
@@ -387,6 +463,11 @@ namespace WcfFIARService
                 }
                 return gamesList;
             }
+        }
+
+        public bool ping()
+        {
+            return true;
         }
 
 

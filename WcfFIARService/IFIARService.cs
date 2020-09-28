@@ -47,8 +47,6 @@ namespace WcfFIARService
         [OperationContract(IsOneWay = true)]
         void PlayerLogout(string username);
 
-        [OperationContract]
-        void Init();
 
         [OperationContract(IsOneWay = true)]
         void Disconnected(string username);//middle game or something
@@ -67,6 +65,8 @@ namespace WcfFIARService
         [OperationContract]
         List<GameInfo> GetOngoingGames();
 
+        [OperationContract]
+        bool ping();
 
     }
     [ServiceContract]
@@ -84,9 +84,6 @@ namespace WcfFIARService
         [OperationContract(IsOneWay = true)]
         void UpdateClients(List<PlayerInfo> players);
 
-
-        [OperationContract(IsOneWay = true)]
-        void StartGame();
 
         [OperationContract]
         bool IsAlive();
