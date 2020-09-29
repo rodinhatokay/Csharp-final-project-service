@@ -1,7 +1,11 @@
 ﻿using System.Runtime.Serialization;
 
+
 namespace WcfFIARService
 {
+    /// <summary>
+    /// custom classes for throwing Custom faults
+    /// </summary>
     [DataContract]
     internal class CustomFault
     {

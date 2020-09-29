@@ -9,6 +9,10 @@ namespace WcfFIARService
 {
     //(CallbackContract = typeof(IFIARSCallback))
 
+
+    /// <summary>
+    /// interface for our service functions and callbacks
+    /// </summary>
     [ServiceContract(CallbackContract = typeof(IFIARSCallback))]
     public interface IFIARService
     {
@@ -69,6 +73,9 @@ namespace WcfFIARService
         bool ping();
 
     }
+    /// <summary>
+    /// interface for our services callbacks
+    /// </summary>
     [ServiceContract]
     public interface IFIARSCallback
     {

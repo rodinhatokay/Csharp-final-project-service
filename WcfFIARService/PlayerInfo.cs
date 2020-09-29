@@ -10,6 +10,10 @@ using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
+
+    /// <summary>
+    /// this class meant for displaying player info for clients 
+    /// </summary>
     [DataContract]
     public class PlayerInfo
     {
@@ -32,6 +36,11 @@ namespace WcfFIARService
         {
             init(id);
         }
+        /// <summary>
+        /// given id gets the player from the database and sets into the class
+        /// might throw fault exception
+        /// </summary>
+        /// <param name="id"></param>
         private void init(int id)
         {
             using (var ctx = new FIARDBContext())

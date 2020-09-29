@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
+    /// <summary>
+    /// this class meant for displaying game info for clients 
+    /// </summary>
     [DataContract]
     public class GameInfo
     {
@@ -60,6 +63,13 @@ namespace WcfFIARService
         [DataMember]
         public string GameStartDate { get; set; }
 
+
+
+        /// <summary>
+        /// given id return the stats of the player
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
         public string getPlayerStats(int id)
         {
             var player1 = new PlayerInfo(Player1_id);

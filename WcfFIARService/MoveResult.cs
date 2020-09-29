@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
+    /// <summary>
+    /// simple enum for game to handle move result for each player
+    /// </summary>
     [DataContract]
     public enum MoveResult
     {

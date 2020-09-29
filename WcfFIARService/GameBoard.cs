@@ -11,8 +11,11 @@ using System.Threading.Tasks;
 namespace WcfFIARService
 {
     enum PlayerColor { Empty, Blue, Red };
-
-
+    
+    /// <summary>
+    /// this class handles all games
+    /// i
+    /// </summary>
     class GameBoard
     {
         public Game game { get; }
@@ -21,9 +24,11 @@ namespace WcfFIARService
         public PlayerInfo player2 { get; }
         private bool turnPlayer1;
 
-
-
-
+        /// <summary>
+        /// creates game of given players in database and in host
+        /// </summary>
+        /// <param name="player1"></param>
+        /// <param name="player2"></param>
         public GameBoard(PlayerInfo player1, PlayerInfo player2)
         {
 
@@ -49,6 +54,13 @@ namespace WcfFIARService
 
         }
 
+
+        /// <summary>
+        /// gets where the disk inserted and player who made the move and verifies if its a win, draw, wrong move, or correct move
+        /// </summary>
+        /// <param name="player"></param>
+        /// <param name="col"></param>
+        /// <returns></returns>
         public MoveResult VerifyMove(string player, int col)
         {
             //need to check if all filled to make draw
@@ -79,6 +91,11 @@ namespace WcfFIARService
         }
 
 
+
+        /// <summary>
+        /// cauclates the points of each the players updates the database according the winner or draw
+        /// </summary>
+        /// <param name="player"></param>
         private void EndGame(string player) // draw or the player made move won
         {
             if (player == null)// its a draw 
@@ -95,7 +112,7 @@ namespace WcfFIARService
                     ctx.SaveChanges();
                 }
             }
-            else // ther is a winner!
+            else // there is a winner!
             {
                 using (var ctx = new FIARDBContext())
                 {
@@ -121,6 +138,8 @@ namespace WcfFIARService
             }
         }
 
+
+        
         private int getEmptyInCol(int col)
         {
             for (int i = 0; i < 6; i++)
@@ -129,6 +148,11 @@ namespace WcfFIARService
             return -1;
         }
 
+
+        /// <summary>
+        /// checks if board is filled by colors red and yellow only
+        /// </summary>
+        /// <returns></returns>
         private bool AllfilledbyPlayers()
         {
             for (int i = 0; i < 6; i++)
@@ -144,6 +168,13 @@ namespace WcfFIARService
             return true;
         }
 
+
+        /// <summary>
+        /// checks recursively each direction if someone won
+        /// </summary>
+        /// <param name="col"></param>
+        /// <param name="row"></param>
+        /// <returns></returns>
         private bool CheckIfGameOver(int col, int row)
         {
             var leftDig = advInDirection(board[col, row], col, row, 4, -1, -1);
@@ -155,6 +186,17 @@ namespace WcfFIARService
             return leftDig || rightDig || down || right || left;
         }
 
+
+        /// <summary>
+        /// recursion function to check given direction and count if shows same color given count
+        /// </summary>
+        /// <param name="pc"></param>
+        /// <param name="col"></param>
+        /// <param name="row"></param>
+        /// <param name="count"></param>
+        /// <param name="directionX"></param>
+        /// <param name="directionY"></param>
+        /// <returns></returns>
         private bool advInDirection(PlayerColor pc, int col, int row, int count, int directionX, int directionY)
         {
             if (col < 0 || col > 6 || row < 0 || row > 5 || count < 1)
@@ -166,11 +208,23 @@ namespace WcfFIARService
             return advInDirection(pc, col + directionX, row + directionY, count - 1, directionX, directionY);
         }
 
+
+        /// <summary>
+        /// given username return true if player is in the game 
+        /// else returns false
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         public bool CheckIfPlayerInGame(string username)
         {
             return player1.username == username || player2.username == username;
         }
 
+        /// <summary>
+        /// sets the username as loser and ends the game
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         public PlayerInfo PlayerDisconnected(string username)
         {
             PlayerInfo winner;
@@ -194,6 +248,11 @@ namespace WcfFIARService
         }
 
 
+        /// <summary>
+        /// caucaltes losers points
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         public int calcLoserPoints(string username)
         {
             PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
@@ -213,6 +272,13 @@ namespace WcfFIARService
             return count * 10;
         }
 
+
+        /// <summary>
+        /// checks if all columns are filled by given username
+        /// and returns 100 if true 
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         public int checkIfAllCollsFilled(string username)
         {
             PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
@@ -229,12 +295,10 @@ namespace WcfFIARService
                 }
 
             }
-
             return count == 7 ? 100 : 0;
-
         }
 
-        public override bool Equals(object obj) // im not sure if this is correct
+        public override bool Equals(object obj) 
         {
             var other = obj as GameBoard;
             return other.game.GameId == this.game.GameId;
