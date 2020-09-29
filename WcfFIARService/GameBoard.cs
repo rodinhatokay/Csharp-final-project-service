@@ -10,10 +10,10 @@ using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
-    enum PlayerColor { Empty, Blue, Red };
+    enum PlayerColor { Empty, Yellow, Red };
 
 
-    class GameBoard
+    public class GameBoard
     {
         public Game game { get; }
         private PlayerColor[,] board;
@@ -60,13 +60,13 @@ namespace WcfFIARService
             int row = getEmptyInCol(col);
             if (row != -1)
             {
-                board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Blue;
+                board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Yellow;
                 if (CheckIfGameOver(col, row))
                 {
                     EndGame(player);
                     return MoveResult.YouWon;
                 }
-                if (AllfilledbyPlayers())
+                if (AllFilledByPlayers())
                 {
                     EndGame(null);
                     return MoveResult.Draw;
@@ -85,13 +85,17 @@ namespace WcfFIARService
             {
                 using (var ctx = new FIARDBContext())
                 {
-                    var game = (from g in ctx.Games
-                                where g.GameId == this.game.GameId
-                                select g).FirstOrDefault();
-                    game.GameOver = true;
-                    game.Winner_PlayerId = null;
-                    game.Player2Points = calcLoserPoints(player2.username) + checkIfAllCollsFilled(player2.username);
-                    game.Player1Points = calcLoserPoints(player1.username) + checkIfAllCollsFilled(player1.username);
+                    var games = (from g in ctx.Games
+                                 where g.GameId == this.game.GameId
+                                 select g).ToList();
+                    games.ForEach(g =>
+                    {
+                        g.GameOver = true;
+                        g.Winner_PlayerId = null;
+                        g.Player2Points = CalcLoserPoints(player2.username) + CheckIfAllColsFilled(player2.username);
+                        g.Player1Points = CalcLoserPoints(player1.username) + CheckIfAllColsFilled(player1.username);
+                    });
+
                     ctx.SaveChanges();
                 }
             }
@@ -107,14 +111,14 @@ namespace WcfFIARService
                     if (player == player1.username)
                     {
                         game.Winner_PlayerId = player1.id;
-                        game.Player1Points = 1000 + checkIfAllCollsFilled(player1.username);
-                        game.Player2Points = calcLoserPoints(player2.username) + checkIfAllCollsFilled(player1.username);
+                        game.Player1Points = 1000 + CheckIfAllColsFilled(player1.username);
+                        game.Player2Points = CalcLoserPoints(player2.username) + CheckIfAllColsFilled(player1.username);
                     }
                     else
                     {
                         game.Winner_PlayerId = player2.id;
-                        game.Player2Points = 1000 + checkIfAllCollsFilled(player2.username);
-                        game.Player1Points = calcLoserPoints(player1.username) + checkIfAllCollsFilled(player1.username);
+                        game.Player2Points = 1000 + CheckIfAllColsFilled(player2.username);
+                        game.Player1Points = CalcLoserPoints(player1.username) + CheckIfAllColsFilled(player1.username);
                     }
                     ctx.SaveChanges();
                 }
@@ -129,7 +133,7 @@ namespace WcfFIARService
             return -1;
         }
 
-        private bool AllfilledbyPlayers()
+        private bool AllFilledByPlayers()
         {
             for (int i = 0; i < 6; i++)
             {
@@ -146,24 +150,38 @@ namespace WcfFIARService
 
         private bool CheckIfGameOver(int col, int row)
         {
-            var leftDig = advInDirection(board[col, row], col, row, 4, -1, -1);
-            var left = advInDirection(board[col, row], col, row, 4, -1, 0);
-            var down = advInDirection(board[col, row], col, row, 4, 0, -1);
-            var right = advInDirection(board[col, row], col, row, 4, 1, 0);
-            var rightDig = advInDirection(board[col, row], col, row, 4, 1, -1);
 
-            return leftDig || rightDig || down || right || left;
+            var pc = board[col, row];
+
+
+            var dig_left_up = AdvInDirection(pc, col, row, -1, -1);
+            var dig_left_down = AdvInDirection(pc, col, row, 1, 1);
+
+            var dig_left = dig_left_up + dig_left_down - 1;
+
+            var dig_right_up = AdvInDirection(pc, col, row, -1, 1);
+            var dig_right_down = AdvInDirection(pc, col, row, 1, -1);
+
+            var dig_right = dig_right_up + dig_right_down - 1;
+
+            var horz_left = AdvInDirection(pc, col, row, -1, 0);
+            var horz_right = AdvInDirection(pc, col, row, 1, 0);
+
+            var horz = horz_left + horz_right - 1;
+
+            var down = AdvInDirection(pc, col, row, 0, -1);
+
+            return ((dig_left >= 4) || (dig_right >= 4) || (horz >= 4) || (down >= 4));
         }
 
-        private bool advInDirection(PlayerColor pc, int col, int row, int count, int directionX, int directionY)
+        private int AdvInDirection(PlayerColor pc, int col, int row, int directionCol, int directionRow)
         {
-            if (col < 0 || col > 6 || row < 0 || row > 5 || count < 1)
-                return false;
+            if (col < 0 || col > 6 || row < 0 || row > 5)
+                return 0;
             if (board[col, row] != pc)
-                return false;
-            if (count == 1)
-                return true;
-            return advInDirection(pc, col + directionX, row + directionY, count - 1, directionX, directionY);
+                return 0;
+
+            return 1 + AdvInDirection(pc, col + directionCol, row + directionRow, directionCol, directionRow);
         }
 
         public bool CheckIfPlayerInGame(string username)
@@ -194,9 +212,9 @@ namespace WcfFIARService
         }
 
 
-        public int calcLoserPoints(string username)
+        private int CalcLoserPoints(string username)
         {
-            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
+            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Yellow;
             int count = 0;
             for (int i = 0; i < 6; i++)
             {
@@ -213,9 +231,9 @@ namespace WcfFIARService
             return count * 10;
         }
 
-        public int checkIfAllCollsFilled(string username)
+        private int CheckIfAllColsFilled(string username)
         {
-            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
+            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Yellow;
             int count = 0;
             for (int i = 0; i < 6; i++)
             {
@@ -236,8 +254,32 @@ namespace WcfFIARService
 
         public override bool Equals(object obj) // im not sure if this is correct
         {
-            var other = obj as GameBoard;
-            return other.game.GameId == this.game.GameId;
+            if (obj != null)
+            {
+                var other = obj as GameBoard;
+                return other.game.GameId == this.game.GameId;
+            }
+            return false;
+
+        }
+
+        public override string ToString()
+        {
+            var str = "";
+            for (int i = 5; i >= 0; i--)
+            {
+                for (int j = 0; j < 7; j++)
+                {
+                    str += board[j, i] + " ";
+                }
+                str += "\n";
+            }
+            return str;
+        }
+
+        public override int GetHashCode()
+        {
+            return 50;
         }
     }
 }

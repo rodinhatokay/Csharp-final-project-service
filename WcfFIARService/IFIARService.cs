@@ -12,7 +12,11 @@ namespace WcfFIARService
     [ServiceContract(CallbackContract = typeof(IFIARSCallback))]
     public interface IFIARService
     {
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="pass"></param>
         [OperationContract]
         [FaultContract(typeof(PlayerAlreadyExistsInDataBase))]
         void RegisterPlayer(string username, string pass);
