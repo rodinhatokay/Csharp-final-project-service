@@ -89,7 +89,7 @@ namespace WcfFIARService
         }
 
 
-        
+
         /// <summary>
         /// on creating host we reseting the players status to logged out
         /// </summary>
@@ -276,13 +276,14 @@ namespace WcfFIARService
         /// <summary>
         /// check if all players are alive
         /// </summary>
-        private void checkEveryOne()
+        private async void checkEveryOne()
         {
             Thread t = new Thread(() =>
             {
                 while (true)
                 {
-                    foreach (var c in clients)
+                    var copy = new Dictionary<PlayerInfo, IFIARSCallback>(clients);
+                    foreach (var c in copy)
                     {
                         IsAlive(c.Key);
                     }
@@ -434,8 +435,9 @@ namespace WcfFIARService
                 result = clients[player2].SendInvite(fromPlayer);
 
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                SendStatusMessageEx("ERROR : " + ex.Message);
                 OpponentNotAvailableFault fault = new OpponentNotAvailableFault();
                 SendStatusMessageEx(fault.Details);
                 throw new FaultException<OpponentNotAvailableFault>(fault);
@@ -591,20 +593,17 @@ namespace WcfFIARService
             var player = clients.Keys.FirstOrDefault(x => x.username == username);
             player.Status = Status.Online;
             var avlPlayers = GetAvalibalePlayers();
-            foreach (var p in clients)
+            foreach (var p in avlPlayers)
             {
                 try
                 {
-                    if (p.Key.username != username)
-                        p.Value.UpdateClients(avlPlayers);
-                    else
-                    {
-                        p.Key.Status = Status.Online;
-                    }
+                    if (p.username != username)
+                        clients[p].UpdateClients(avlPlayers);
+
                 }
                 catch (TimeoutException)
                 {
-                    this.PlayerLogout(p.Key.username);
+                    this.PlayerLogout(p.username);
                 }
 
             }
