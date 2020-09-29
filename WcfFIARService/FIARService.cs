@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
+    /// <summary>
+    /// serivce class for handling all kind of calls for clients
+    /// </summary>
     [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single,
           ConcurrencyMode = ConcurrencyMode.Multiple)]
 
@@ -16,22 +19,22 @@ namespace WcfFIARService
 
 
     public class FIARService : IFIARService
-
-
-
     {
+        /// <summary>
+        /// function to display
+        /// </summary>
+        /// <param name="msg"></param>
+        /// <param name="datetime"></param>
         public delegate void MyHostEventHandler(string msg, DateTime datetime);
-
-
         MyHostEventHandler _myHostEvent;
-        Dictionary<PlayerInfo, IFIARSCallback> clients = new Dictionary<PlayerInfo, IFIARSCallback>();
-        //private List<PlayerInfo> playersOnline;
 
+        Dictionary<PlayerInfo, IFIARSCallback> clients = new Dictionary<PlayerInfo, IFIARSCallback>();
         List<GameBoard> games = new List<GameBoard>();
         public FIARService()
         {
             Init();
         }
+
         public FIARService(MyHostEventHandler MyHostEvent)
         {
             this._myHostEvent = MyHostEvent;
@@ -39,8 +42,6 @@ namespace WcfFIARService
             {
 
             });
-
-
             Init();
             SendStatusMessageEx("server started");
 
@@ -51,6 +52,12 @@ namespace WcfFIARService
             if (_myHostEvent != null)
                 _myHostEvent(msg, DateTime.Now);
         }
+
+
+        /// <summary>
+        /// sends available players to clients
+        /// </summary>
+        /// <returns></returns>
 
         public List<PlayerInfo> GetAvalibalePlayers()
         {
@@ -71,6 +78,7 @@ namespace WcfFIARService
 
         }
 
+
         private void UpdateAvailablePlayer()
         {
             var pl = GetAvalibalePlayers();
@@ -79,6 +87,13 @@ namespace WcfFIARService
                 clients[p].UpdateClients(pl);
             }
         }
+
+
+        
+        /// <summary>
+        /// on creating host we reseting the players status to logged out
+        /// </summary>
+
         private void Init()
         {
             clients = new Dictionary<PlayerInfo, IFIARSCallback>();
@@ -102,10 +117,17 @@ namespace WcfFIARService
 
                 ctx.SaveChanges();
             }
-
             checkEveryOne();
         }
 
+
+
+        /// <summary>
+        /// call for clients to login
+        /// if clients doesn't exist or player already connected will throw fault accordingly
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="password"></param>
         public void PlayerLogin(string username, string password)
         {
             using (var ctx = new FIARDBContext())
@@ -137,17 +159,16 @@ namespace WcfFIARService
                         clients[p].UpdateClients(avPlayers);
                     }
                 }
-
                 clients.Add(new PlayerInfo(player), callback);
-
-
-
-
                 SendStatusMessageEx("Login : " + username + " Loged in!");
-
             }
         }
 
+
+        /// <summary>
+        /// clients logging out 
+        /// </summary>
+        /// <param name="username"></param>
         public void PlayerLogout(string username)
         {
 
@@ -182,10 +203,14 @@ namespace WcfFIARService
                 SendStatusMessageEx(ex.Message);
             }
             //clients.Remove(username);
-
-
         }
 
+
+        /// <summary>
+        /// returns the games which the given username plays in 
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         private GameBoard findGame(string username)
         {
             foreach (var g in games)
@@ -193,22 +218,24 @@ namespace WcfFIARService
                 if (g.CheckIfPlayerInGame(username))
                     return g;
             }
-
             return null;
-
         }
+
+
+        /// <summary>
+        /// function that handles each players move 
+        /// it tests if the move was correct and updates the other player about the move was made
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="col"></param>
+        /// <returns></returns>
         public MoveResult ReportMove(string username, int col)
         {
             try
             {
-
-                //var reporter = GetConnectedPlayer(username);
                 GameBoard gb = findGame(username);
                 string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username;
                 var otherPlayer = GetConnectedPlayer(other_player);
-
-
-
                 MoveResult result = gb.VerifyMove(username, col); //if game ended the game will auto update the database accordinly 
                 SendStatusMessageEx("board:\n " + gb.ToString());
                 SendStatusMessageEx(result.ToString());
@@ -244,6 +271,11 @@ namespace WcfFIARService
             }
         }
 
+
+
+        /// <summary>
+        /// check if all players are alive
+        /// </summary>
         private void checkEveryOne()
         {
             Thread t = new Thread(() =>
@@ -258,11 +290,13 @@ namespace WcfFIARService
                 }
             });
             t.Start();
-
-
-
-
         }
+
+
+        /// <summary>
+        /// check if given player is alive
+        /// </summary>
+        /// <param name="player"></param>
         private async void IsAlive(PlayerInfo player)
         {
             var callback = clients[player];
@@ -287,9 +321,16 @@ namespace WcfFIARService
             }
 
         }
+
+
+        /// <summary>
+        /// function for client to call to register the player to database
+        /// if the username already exists will throw fault
+        /// </summary>
+        /// <param name="username"></param>
+        /// <param name="pass"></param>
         public void RegisterPlayer(string username, string pass)
         {
-
             try
             {
                 using (var ctx = new FIARDBContext())
@@ -325,6 +366,11 @@ namespace WcfFIARService
             }
         }
 
+
+        /// <summary>
+        /// called when players disconnects from game and sets the other player as winner by default
+        /// </summary>
+        /// <param name="username"></param>
         public void Disconnected(string username)
         {
             try
@@ -360,6 +406,14 @@ namespace WcfFIARService
 
         }
 
+
+
+        /// <summary>
+        /// clients call to send invite to player and automatically asks oppoent and return the answer
+        /// </summary>
+        /// <param name="fromPlayer"></param>
+        /// <param name="toPlayer"></param>
+        /// <returns></returns>
         public bool InvitationSend(string fromPlayer, string toPlayer)
         {
 
@@ -388,6 +442,7 @@ namespace WcfFIARService
             }
 
 
+
             if (result == true)
             {
                 SendStatusMessageEx(toPlayer + "Accepted the invite from " + fromPlayer);
@@ -409,6 +464,11 @@ namespace WcfFIARService
         }
 
 
+
+        /// <summary>
+        /// return all players in the database
+        /// </summary>
+        /// <returns></returns>
         public List<PlayerInfo> GetAllPlayers()
         {
 
@@ -427,6 +487,12 @@ namespace WcfFIARService
 
         }
 
+        /// <summary>
+        /// returns all games going on and ended between given to players
+        /// </summary>
+        /// <param name="player1"></param>
+        /// <param name="player2"></param>
+        /// <returns></returns>
         public List<GameInfo> GetPlayersGames(string player1, string player2)
         {
             using (var ctx = new FIARDBContext())
@@ -445,6 +511,12 @@ namespace WcfFIARService
             }
         }
 
+
+        /// <summary>
+        /// return all players currently alive
+        /// </summary>
+        /// <param name="username"></param>
+        /// <returns></returns>
         private PlayerInfo GetConnectedPlayer(string username)
         {
 
@@ -456,6 +528,11 @@ namespace WcfFIARService
             throw new FaultException<PlayerDoesntExistInDataBase>(new PlayerDoesntExistInDataBase(username));
         }
 
+
+        /// <summary>
+        /// returns all games ended in database
+        /// </summary>
+        /// <returns></returns>
         public List<GameInfo> GetEndedGames()
         {
             List<GameInfo> gamesList = new List<GameInfo>();
@@ -473,6 +550,11 @@ namespace WcfFIARService
 
         }
 
+
+        /// <summary>
+        /// return all ongoing games currently
+        /// </summary>
+        /// <returns></returns>
         public List<GameInfo> GetOngoingGames()
         {
             List<GameInfo> gamesList = new List<GameInfo>();
@@ -489,12 +571,21 @@ namespace WcfFIARService
             }
         }
 
+
+        /// <summary>
+        /// client call to check if host is alive
+        /// </summary>
+        /// <returns></returns>
         public bool ping()
         {
             return true;
         }
 
 
+        /// <summary>
+        /// sets players avaible to play 
+        /// </summary>
+        /// <param name="username"></param>
         public void SetAsAvailablePlayer(string username)
         {
             var player = clients.Keys.FirstOrDefault(x => x.username == username);
