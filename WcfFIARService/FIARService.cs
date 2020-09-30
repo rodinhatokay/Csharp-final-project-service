@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.Entity.Infrastructure.Design;
 using System.Linq;
 using System.ServiceModel;
 using System.Threading;
@@ -79,21 +78,10 @@ namespace WcfFIARService
         }
 
 
-        private void UpdateAvailablePlayer()
-        {
-            var pl = GetAvalibalePlayers();
-            foreach (var p in pl)
-            {
-                clients[p].UpdateClients(pl);
-            }
-        }
-
-
-
+        
         /// <summary>
         /// on creating host we reseting the players status to logged out
         /// </summary>
-
         private void Init()
         {
             clients = new Dictionary<PlayerInfo, IFIARSCallback>();
@@ -151,13 +139,10 @@ namespace WcfFIARService
                 player.Status = 1;
                 ctx.SaveChanges();
                 IFIARSCallback callback = OperationContext.Current.GetCallbackChannel<IFIARSCallback>();
-                var avPlayers = GetAvalibalePlayers();
-                foreach (var p in avPlayers)
+                var getPlayers = GetAvalibalePlayers();
+                foreach (var c in clients)
                 {
-                    if (p.username != username)
-                    {
-                        clients[p].UpdateClients(avPlayers);
-                    }
+                    c.Value.UpdateClients(getPlayers);
                 }
                 clients.Add(new PlayerInfo(player), callback);
                 SendStatusMessageEx("Login : " + username + " Loged in!");
@@ -237,7 +222,6 @@ namespace WcfFIARService
                 string other_player = (username == gb.player1.username) ? gb.player2.username : gb.player1.username;
                 var otherPlayer = GetConnectedPlayer(other_player);
                 MoveResult result = gb.VerifyMove(username, col); //if game ended the game will auto update the database accordinly 
-                SendStatusMessageEx("board:\n " + gb.ToString());
                 SendStatusMessageEx(result.ToString());
                 if (result == MoveResult.NotYourTurn || result == MoveResult.IlligelMove)
                 {
@@ -246,13 +230,12 @@ namespace WcfFIARService
 
                 if (result == MoveResult.Draw || result == MoveResult.YouWon)
                 {
-                    var avPlayers = GetAvalibalePlayers();
                     games.Remove(gb);
                     foreach (var p in clients)
                     {
                         if (p.Key.username != username && p.Key.username != other_player)
                         {
-                            p.Value.UpdateClients(avPlayers);
+                            p.Value.UpdateClients(GetAvalibalePlayers());
                         }
                     }
 
@@ -276,15 +259,15 @@ namespace WcfFIARService
         /// <summary>
         /// check if all players are alive
         /// </summary>
-        private async void checkEveryOne()
+        private void checkEveryOne()
         {
             Thread t = new Thread(() =>
             {
                 while (true)
                 {
-                    var copy = new Dictionary<PlayerInfo, IFIARSCallback>(clients);
-                    foreach (var c in copy)
+                    foreach (var c in clients)
                     {
+
                         IsAlive(c.Key);
                     }
                     Thread.Sleep(10000);
@@ -308,7 +291,7 @@ namespace WcfFIARService
                 {
                     callback.IsAlive();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
 
                     exp = true;
@@ -387,18 +370,18 @@ namespace WcfFIARService
 
                 }
                 games = games.Where(x => !x.CheckIfPlayerInGame(username)).ToList();
-                var avlPlayers = GetAvalibalePlayers();
                 foreach (var p in clients)
                 {
                     if (p.Key.username != username)
                     {
-                        p.Value.UpdateClients(avlPlayers);
+                        p.Value.UpdateClients(GetAvalibalePlayers());
                         SendStatusMessageEx("sent refresh to  : " + p.Key.username);
                     }
                 }
 
 
                 SendStatusMessageEx("Disconnected : " + username + " Disconnected");
+                return;
             }
             catch (Exception ex)
             {
@@ -417,7 +400,6 @@ namespace WcfFIARService
         /// <returns></returns>
         public bool InvitationSend(string fromPlayer, string toPlayer)
         {
-
             var player1 = GetConnectedPlayer(fromPlayer);
             var player2 = GetConnectedPlayer(toPlayer);
 
@@ -427,40 +409,25 @@ namespace WcfFIARService
                 SendStatusMessageEx(fault.Details);
                 throw new FaultException<OpponentNotAvailableFault>(fault);
             }
-
-            var result = false;
-            try
-            {
-                SendStatusMessageEx("iNVETATION SENT BY " + fromPlayer + " TO " + toPlayer);
-                result = clients[player2].SendInvite(fromPlayer);
-
-            }
-            catch (Exception ex)
-            {
-                SendStatusMessageEx("ERROR : " + ex.Message);
-                OpponentNotAvailableFault fault = new OpponentNotAvailableFault();
-                SendStatusMessageEx(fault.Details);
-                throw new FaultException<OpponentNotAvailableFault>(fault);
-            }
-
-
-
+            var result = clients[player2].SendInvite(fromPlayer);
             if (result == true)
             {
-                SendStatusMessageEx(toPlayer + "Accepted the invite from " + fromPlayer);
-
                 GameBoard g = new GameBoard(player1, player2);
                 games.Add(g);
-                UpdateAvailablePlayer();
-
+                var pl = GetAvalibalePlayers();
+                foreach (var p in clients)
+                {
+                    if (p.Key.id != player1.id && p.Key.id != player2.id)
+                    {
+                        p.Value.UpdateClients(pl);
+                    }
+                }
                 return true;
             }
-            SendStatusMessageEx(toPlayer + "did not accepted the invite from " + fromPlayer);
-
-
-
-            return false;
-
+            else
+            {
+                return false;
+            }
 
 
         }
@@ -592,18 +559,21 @@ namespace WcfFIARService
         {
             var player = clients.Keys.FirstOrDefault(x => x.username == username);
             player.Status = Status.Online;
-            var avlPlayers = GetAvalibalePlayers();
-            foreach (var p in avlPlayers)
+
+            foreach (var p in clients)
             {
                 try
                 {
-                    if (p.username != username)
-                        clients[p].UpdateClients(avlPlayers);
-
+                    if (p.Key.username != username)
+                        p.Value.UpdateClients(GetAvalibalePlayers());
+                    else
+                    {
+                        p.Key.Status = Status.Online;
+                    }
                 }
-                catch (TimeoutException)
+                catch (TimeoutException ex)
                 {
-                    this.PlayerLogout(p.username);
+                    this.PlayerLogout(p.Key.username);
                 }
 
             }

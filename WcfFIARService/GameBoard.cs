@@ -10,15 +10,13 @@ using System.Threading.Tasks;
 
 namespace WcfFIARService
 {
-    enum PlayerColor { Empty, Yellow, Red };
-
+    enum PlayerColor { Empty, Blue, Red };
 
     /// <summary>
     /// this class handles all games
     /// i
     /// </summary>
-    public class GameBoard
-
+    class GameBoard
     {
         public Game game { get; }
         private PlayerColor[,] board;
@@ -74,13 +72,13 @@ namespace WcfFIARService
             int row = getEmptyInCol(col);
             if (row != -1)
             {
-                board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Yellow;
+                board[col, row] = turnPlayer1 ? PlayerColor.Red : PlayerColor.Blue;
                 if (CheckIfGameOver(col, row))
                 {
                     EndGame(player);
                     return MoveResult.YouWon;
                 }
-                if (AllFilledByPlayers())
+                if (AllfilledbyPlayers())
                 {
                     EndGame(null);
                     return MoveResult.Draw;
@@ -104,17 +102,13 @@ namespace WcfFIARService
             {
                 using (var ctx = new FIARDBContext())
                 {
-                    var games = (from g in ctx.Games
-                                 where g.GameId == this.game.GameId
-                                 select g).ToList();
-                    games.ForEach(g =>
-                    {
-                        g.GameOver = true;
-                        g.Winner_PlayerId = null;
-                        g.Player2Points = CalcLoserPoints(player2.username) + CheckIfAllColsFilled(player2.username);
-                        g.Player1Points = CalcLoserPoints(player1.username) + CheckIfAllColsFilled(player1.username);
-                    });
-
+                    var game = (from g in ctx.Games
+                                where g.GameId == this.game.GameId
+                                select g).FirstOrDefault();
+                    game.GameOver = true;
+                    game.Winner_PlayerId = null;
+                    game.Player2Points = calcLoserPoints(player2.username) + checkIfAllCollsFilled(player2.username);
+                    game.Player1Points = calcLoserPoints(player1.username) + checkIfAllCollsFilled(player1.username);
                     ctx.SaveChanges();
                 }
             }
@@ -130,14 +124,14 @@ namespace WcfFIARService
                     if (player == player1.username)
                     {
                         game.Winner_PlayerId = player1.id;
-                        game.Player1Points = 1000 + CheckIfAllColsFilled(player1.username);
-                        game.Player2Points = CalcLoserPoints(player2.username) + CheckIfAllColsFilled(player1.username);
+                        game.Player1Points = 1000 + checkIfAllCollsFilled(player1.username);
+                        game.Player2Points = calcLoserPoints(player2.username) + checkIfAllCollsFilled(player1.username);
                     }
                     else
                     {
                         game.Winner_PlayerId = player2.id;
-                        game.Player2Points = 1000 + CheckIfAllColsFilled(player2.username);
-                        game.Player1Points = CalcLoserPoints(player1.username) + CheckIfAllColsFilled(player1.username);
+                        game.Player2Points = 1000 + checkIfAllCollsFilled(player2.username);
+                        game.Player1Points = calcLoserPoints(player1.username) + checkIfAllCollsFilled(player1.username);
                     }
                     ctx.SaveChanges();
                 }
@@ -145,7 +139,7 @@ namespace WcfFIARService
         }
 
 
-        
+
         private int getEmptyInCol(int col)
         {
             for (int i = 0; i < 6; i++)
@@ -154,11 +148,12 @@ namespace WcfFIARService
             return -1;
         }
 
+
         /// <summary>
         /// checks if board is filled by colors red and yellow only
         /// </summary>
         /// <returns></returns>
-        private bool AllFilledByPlayers()
+        private bool AllfilledbyPlayers()
         {
             for (int i = 0; i < 6; i++)
             {
@@ -174,12 +169,6 @@ namespace WcfFIARService
         }
 
 
-        /// <summary>
-        /// checks recursively each direction if someone won
-        /// </summary>
-        /// <param name="col"></param>
-        /// <param name="row"></param>
-        /// <returns></returns>
         private bool CheckIfGameOver(int col, int row)
         {
 
@@ -273,10 +262,9 @@ namespace WcfFIARService
         /// </summary>
         /// <param name="username"></param>
         /// <returns></returns>
-        private int CalcLoserPoints(string username)
-
+        public int calcLoserPoints(string username)
         {
-            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Yellow;
+            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
             int count = 0;
             for (int i = 0; i < 6; i++)
             {
@@ -300,10 +288,9 @@ namespace WcfFIARService
         /// </summary>
         /// <param name="username"></param>
         /// <returns></returns>
-        private int CheckIfAllColsFilled(string username)
-
+        public int checkIfAllCollsFilled(string username)
         {
-            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Yellow;
+            PlayerColor c = (player1.username == username) ? PlayerColor.Red : PlayerColor.Blue;
             int count = 0;
             for (int i = 0; i < 6; i++)
             {
@@ -320,34 +307,10 @@ namespace WcfFIARService
             return count == 7 ? 100 : 0;
         }
 
-        public override bool Equals(object obj) 
+        public override bool Equals(object obj)
         {
-            if (obj != null)
-            {
-                var other = obj as GameBoard;
-                return other.game.GameId == this.game.GameId;
-            }
-            return false;
-
-        }
-
-        public override string ToString()
-        {
-            var str = "";
-            for (int i = 5; i >= 0; i--)
-            {
-                for (int j = 0; j < 7; j++)
-                {
-                    str += board[j, i] + " ";
-                }
-                str += "\n";
-            }
-            return str;
-        }
-
-        public override int GetHashCode()
-        {
-            return 50;
+            var other = obj as GameBoard;
+            return other.game.GameId == this.game.GameId;
         }
     }
 }
